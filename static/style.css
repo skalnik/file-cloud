@@ -1,0 +1,37 @@
+body {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  height: 100vh;
+  grid-template-rows: auto 1fr auto;
+}
+
+h1 {
+  padding: .5em;
+}
+
+#drop-zone {
+  margin: 1em;
+  display: grid;
+  place-items: center;
+  border: 5px solid red;
+}
+
+#drop-zone .hover-text {
+  display: none;
+}
+#drop-zone .default-text {
+  display: revert;
+}
+
+#drop-zone.hover {
+  border: 5px solid blue;
+}
+
+#drop-zone.hover .hover-text {
+  display: revert;
+}
+
+#drop-zone.hover .default-text {
+  display: none;
+}

@@ -1,0 +1,2 @@
+fmt:
+	gofmt -w *.go
