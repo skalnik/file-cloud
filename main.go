@@ -1,11 +1,11 @@
 package main
 
 import (
-	"net/http"
-	"text/template"
-	"os"
-	"io"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"text/template"
 )
 
 func main() {
