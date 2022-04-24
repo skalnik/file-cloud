@@ -9,10 +9,16 @@ import (
 )
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/", index)
-	http.ListenAndServe(":8080", nil)
+
+	http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
