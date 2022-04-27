@@ -56,7 +56,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 		}
 		defer file.Close()
 
-		status, err := upload(file)
+		status, err := upload(handler.Filename, file)
 
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -78,7 +78,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func upload(file multipart.File) (bool, error) {
+func upload(name string, file multipart.File) (bool, error) {
 	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(fileCloudConfig.bucket),
 		Key:    aws.String("lmaolol"),
