@@ -81,7 +81,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 func upload(name string, file multipart.File) (bool, error) {
 	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(fileCloudConfig.bucket),
-		Key:    aws.String("lmaolol"),
+		Key:    aws.String(name),
 		Body:   file,
 	})
 
