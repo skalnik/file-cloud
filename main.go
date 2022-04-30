@@ -30,7 +30,7 @@ type Config struct {
 var s3Client *s3.Client
 var fileCloudConfig Config
 
-const BYTE_COUNT = 4
+const BYTE_COUNT = 5
 
 func main() {
 	log.Println("File Cloud starting up...")
