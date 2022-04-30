@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -25,6 +29,8 @@ type Config struct {
 
 var s3Client *s3.Client
 var fileCloudConfig Config
+
+const BYTE_COUNT = 4
 
 func main() {
 	log.Println("File Cloud starting up...")
@@ -67,7 +73,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 			log.Fatal(err)
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 		} else {
-			log.Println("File uploaded!")
+			log.Println("File uploaded")
 			writer.Write([]byte(fmt.Sprintf("Got file: %s", handler.Filename)))
 		}
 	} else {
@@ -85,18 +91,39 @@ func index(writer http.ResponseWriter, request *http.Request) {
 }
 
 func upload(name string, file multipart.File) error {
-	_, err := s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+	buffer := &bytes.Buffer{}
+	tee := io.TeeReader(file, buffer)
+	key, err := filename(tee)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Uploading file as %s", key)
+
+	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(fileCloudConfig.bucket),
-		Key:    aws.String(name),
-		Body:   file,
+		Key:    aws.String(key),
+		Body:   buffer,
 	})
 
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 
 	return nil
+}
+
+func filename(file io.Reader) (string, error) {
+	hasher := sha256.New()
+
+	if _, err := io.Copy(hasher, file); err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+
+	hash := hasher.Sum(nil)
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash[0:BYTE_COUNT]), nil
 }
 
 func lookupEnvDefault(envKey, defaultValue string) string {
