@@ -12,4 +12,4 @@ Upload files and get short links.
 - [ ] Can display files
 - [ ] Looks better
 - [ ] macOS Client
-- [ ] Authentication
+- [x] Authentication

@@ -21,10 +21,15 @@ import (
 )
 
 type Config struct {
+	// AWS
 	bucket string
 	key    string
 	secret string
-	port   string // https://twitter.com/keith_duncan/status/638582305917833217
+	// Basic Auth
+	user string
+	pass string
+	// General
+	port string // https://twitter.com/keith_duncan/status/638582305917833217
 }
 
 var s3Client *s3.Client
@@ -38,6 +43,8 @@ func main() {
 	flag.StringVar(&fileCloudConfig.key, "key", lookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
 	flag.StringVar(&fileCloudConfig.secret, "secret", lookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
 	flag.StringVar(&fileCloudConfig.port, "port", lookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
+	flag.StringVar(&fileCloudConfig.user, "user", lookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
+	flag.StringVar(&fileCloudConfig.pass, "pass", lookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
 	flag.Parse()
 
 	creds := credentials.NewStaticCredentialsProvider(fileCloudConfig.key, fileCloudConfig.secret, "")
@@ -49,12 +56,37 @@ func main() {
 
 	s3Client = s3.NewFromConfig(cfg)
 
-	fs := http.FileServer(http.Dir("static/"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.HandleFunc("/", index)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
+		log.Println("Setting up without auth...")
+		http.HandleFunc("/", index)
+	} else {
+		log.Println("Setting up with basic auth...")
+		http.HandleFunc("/", basicAuth(index))
+	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.port)
 	http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), nil)
+}
+
+func basicAuth(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		user, pass, ok := request.BasicAuth()
+
+		if !ok {
+			log.Println("Couldn't parse basic auth")
+		} else {
+			if user == fileCloudConfig.user && pass == fileCloudConfig.pass {
+				next.ServeHTTP(writer, request)
+				return
+			} else {
+				log.Println("Incorrect authentication provided")
+			}
+		}
+
+		writer.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		http.Error(writer, "Unauthorized", http.StatusUnauthorized)
+	})
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
