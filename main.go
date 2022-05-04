@@ -218,7 +218,7 @@ func Filename(file io.Reader) (string, error) {
 }
 
 func ServeError(writer http.ResponseWriter, err error) {
-	log.Println("\033[31m", err, "\033[0m")
+	log.Println("\033[31m" + err.Error() + "\033[0m")
 	http.Error(writer, err.Error(), http.StatusInternalServerError)
 }
 
