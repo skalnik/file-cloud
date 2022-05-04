@@ -139,17 +139,24 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	key := vars["key"]
 	log.Printf("Got request for key: %s", key)
 
-	response, err := s3.NewPresignClient(s3Client).PresignGetObject(context.TODO(), &s3.GetObjectInput{
+	input := &s3.GetObjectInput{
 		Bucket: aws.String(fileCloudConfig.bucket),
 		Key:    aws.String(key),
-	})
+	}
 
+	presign, err := s3.NewPresignClient(s3Client).PresignGetObject(context.TODO(), input)
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+	object, err := s3Client.GetObject(context.TODO(), input)
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 
-	log.Printf("%s", response.URL)
+	log.Printf("%s", *object.ContentType)
+	log.Printf("%s", presign.URL)
 }
 
 func UploadFile(file multipart.File, header textproto.MIMEHeader) error {
