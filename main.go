@@ -7,13 +7,13 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"os"
-	"html/template"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -43,11 +43,11 @@ const BYTE_COUNT = 5
 func main() {
 	log.Println("File Cloud starting up...")
 	flag.StringVar(&fileCloudConfig.bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
-	flag.StringVar(&fileCloudConfig.key,    "key",    LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
+	flag.StringVar(&fileCloudConfig.key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
 	flag.StringVar(&fileCloudConfig.secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
-	flag.StringVar(&fileCloudConfig.port,   "port",   LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
-	flag.StringVar(&fileCloudConfig.user,   "user",   LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
-	flag.StringVar(&fileCloudConfig.pass,   "pass",   LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
+	flag.StringVar(&fileCloudConfig.port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
+	flag.StringVar(&fileCloudConfig.user, "user", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
+	flag.StringVar(&fileCloudConfig.pass, "pass", LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
 	flag.Parse()
 
 	creds := credentials.NewStaticCredentialsProvider(fileCloudConfig.key, fileCloudConfig.secret, "")
@@ -107,28 +107,25 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 func IndexHandler(writer http.ResponseWriter, request *http.Request) {
 	t, err := template.ParseFiles("templates/index.tmpl.html")
 	if err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		ServeError(writer, err)
 	}
 	if err := t.Execute(writer, ""); err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		ServeError(writer, err)
 	}
 }
 
 func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 	file, handler, err := request.FormFile("file")
 	if err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		ServeError(writer, err)
+		return
 	}
 	defer file.Close()
 
 	err = UploadFile(file, handler.Header)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		ServeError(writer, err)
 	} else {
 		// TODO Redirect to lookup URL for it
 		writer.Write([]byte(fmt.Sprintf("Got file: %s", handler.Filename)))
@@ -138,7 +135,6 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	key := vars["key"]
-	log.Printf("Got request for key: %s", key)
 
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(fileCloudConfig.bucket),
@@ -147,19 +143,20 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 
 	presign, err := s3.NewPresignClient(s3Client).PresignGetObject(context.TODO(), input)
 	if err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		ServeError(writer, err)
+		return
 	}
 	object, err := s3Client.GetObject(context.TODO(), input)
 	if err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		//TODO Serve 404 page
+		ServeError(writer, err)
+		return
 	}
 
 	templateData := struct {
 		Key string
 		Url string
-	} {
+	}{
 		Key: key,
 		Url: presign.URL,
 	}
@@ -173,6 +170,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if err = t.Execute(writer, templateData); err != nil {
@@ -217,6 +215,11 @@ func Filename(file io.Reader) (string, error) {
 
 	hash := hasher.Sum(nil)
 	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash[0:BYTE_COUNT]), nil
+}
+
+func ServeError(writer http.ResponseWriter, err error) {
+	log.Println("\033[31m", err, "\033[0m")
+	http.Error(writer, err.Error(), http.StatusInternalServerError)
 }
 
 func LookupEnvDefault(envKey, defaultValue string) string {
