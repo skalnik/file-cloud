@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/gorilla/mux"
 )
 
 type Config struct {
@@ -56,20 +57,24 @@ func main() {
 
 	s3Client = s3.NewFromConfig(cfg)
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	router := mux.NewRouter()
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	router.HandleFunc("/", IndexHandler).Methods("GET")
+	router.HandleFunc("/", UploadHandler).Methods("POST")
+	router.HandleFunc("/{id:[a-zA-Z0-9-_=]+}", LookupHandler)
+
 	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
 		log.Println("Setting up without auth...")
-		http.HandleFunc("/", index)
 	} else {
 		log.Println("Setting up with basic auth...")
-		http.HandleFunc("/", basicAuth(index))
+		router.Use(BasicAuthWrapper)
 	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.port)
-	http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), nil)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), router))
 }
 
-func basicAuth(next http.HandlerFunc) http.HandlerFunc {
+func BasicAuthWrapper(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		user, pass, ok := request.BasicAuth()
 
@@ -89,43 +94,47 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-func index(writer http.ResponseWriter, request *http.Request) {
-	if request.Method == "POST" {
-		log.Println("Processing upload...")
-		file, handler, err := request.FormFile("file")
-		if err != nil {
-			log.Fatal(err)
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-		}
-		defer file.Close()
-
-		err = upload(handler.Filename, file)
-
-		if err != nil {
-			log.Fatal(err)
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-		} else {
-			log.Println("File uploaded")
-			writer.Write([]byte(fmt.Sprintf("Got file: %s", handler.Filename)))
-		}
-	} else {
-		log.Println("Serving index")
-		t, err := template.ParseFiles("index.tmpl.html")
-		if err != nil {
-			log.Fatal(err)
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-		}
-		if err := t.Execute(writer, ""); err != nil {
-			log.Fatal(err)
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-		}
+func IndexHandler(writer http.ResponseWriter, request *http.Request) {
+	log.Println("Serving index")
+	t, err := template.ParseFiles("index.tmpl.html")
+	if err != nil {
+		log.Fatal(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+	if err := t.Execute(writer, ""); err != nil {
+		log.Println(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func upload(name string, file multipart.File) error {
+func UploadHandler(writer http.ResponseWriter, request *http.Request) {
+	log.Println("Processing upload...")
+	file, handler, err := request.FormFile("file")
+	if err != nil {
+		log.Fatal(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+	defer file.Close()
+
+	err = UploadFile(handler.Filename, file)
+
+	if err != nil {
+		log.Fatal(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	} else {
+		log.Println("File uploaded")
+		writer.Write([]byte(fmt.Sprintf("Got file: %s", handler.Filename)))
+	}
+}
+
+func LookupHandler(writer http.ResponseWriter, request *http.Request) {
+	log.Printf("Got request with URL: %s", request.URL)
+}
+
+func UploadFile(name string, file multipart.File) error {
 	buffer := &bytes.Buffer{}
 	tee := io.TeeReader(file, buffer)
-	key, err := filename(tee)
+	key, err := Filename(tee)
 
 	if err != nil {
 		return err
@@ -146,7 +155,7 @@ func upload(name string, file multipart.File) error {
 	return nil
 }
 
-func filename(file io.Reader) (string, error) {
+func Filename(file io.Reader) (string, error) {
 	hasher := sha256.New()
 
 	if _, err := io.Copy(hasher, file); err != nil {
@@ -158,7 +167,7 @@ func filename(file io.Reader) (string, error) {
 	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash[0:BYTE_COUNT]), nil
 }
 
-func lookupEnvDefault(envKey, defaultValue string) string {
+func LookupEnvDefault(envKey, defaultValue string) string {
 	value, exists := os.LookupEnv(envKey)
 
 	if exists {
