@@ -40,12 +40,12 @@ const BYTE_COUNT = 5
 
 func main() {
 	log.Println("File Cloud starting up...")
-	flag.StringVar(&fileCloudConfig.bucket, "bucket", lookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
-	flag.StringVar(&fileCloudConfig.key, "key", lookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
-	flag.StringVar(&fileCloudConfig.secret, "secret", lookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
-	flag.StringVar(&fileCloudConfig.port, "port", lookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
-	flag.StringVar(&fileCloudConfig.user, "user", lookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
-	flag.StringVar(&fileCloudConfig.pass, "pass", lookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
+	flag.StringVar(&fileCloudConfig.bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
+	flag.StringVar(&fileCloudConfig.key,    "key",    LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
+	flag.StringVar(&fileCloudConfig.secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
+	flag.StringVar(&fileCloudConfig.port,   "port",   LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
+	flag.StringVar(&fileCloudConfig.user,   "user",   LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
+	flag.StringVar(&fileCloudConfig.pass,   "pass",   LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
 	flag.Parse()
 
 	creds := credentials.NewStaticCredentialsProvider(fileCloudConfig.key, fileCloudConfig.secret, "")
@@ -58,6 +58,7 @@ func main() {
 	s3Client = s3.NewFromConfig(cfg)
 
 	router := mux.NewRouter()
+	router.Use(LoggingMiddleware)
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	router.HandleFunc("/", IndexHandler).Methods("GET")
 	router.HandleFunc("/", UploadHandler).Methods("POST")
@@ -67,14 +68,14 @@ func main() {
 		log.Println("Setting up without auth...")
 	} else {
 		log.Println("Setting up with basic auth...")
-		router.Use(BasicAuthWrapper)
+		router.Use(BasicAuthMiddleware)
 	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), router))
 }
 
-func BasicAuthWrapper(next http.Handler) http.Handler {
+func BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		user, pass, ok := request.BasicAuth()
 
@@ -89,16 +90,22 @@ func BasicAuthWrapper(next http.Handler) http.Handler {
 			}
 		}
 
-		writer.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		writer.Header().Set("WWW-Authenticate", `Basic realm="File Cloud", charset="UTF-8"`)
 		http.Error(writer, "Unauthorized", http.StatusUnauthorized)
 	})
 }
 
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		log.Printf("Handling %s %s", request.Method, request.URL)
+		next.ServeHTTP(writer, request)
+	})
+}
+
 func IndexHandler(writer http.ResponseWriter, request *http.Request) {
-	log.Println("Serving index")
 	t, err := template.ParseFiles("index.tmpl.html")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 	if err := t.Execute(writer, ""); err != nil {
@@ -108,10 +115,9 @@ func IndexHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UploadHandler(writer http.ResponseWriter, request *http.Request) {
-	log.Println("Processing upload...")
 	file, handler, err := request.FormFile("file")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 	defer file.Close()
@@ -119,10 +125,10 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 	err = UploadFile(handler.Filename, file)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	} else {
-		log.Println("File uploaded")
+		// TODO Redirect to lookup URL for it
 		writer.Write([]byte(fmt.Sprintf("Got file: %s", handler.Filename)))
 	}
 }
@@ -159,7 +165,7 @@ func Filename(file io.Reader) (string, error) {
 	hasher := sha256.New()
 
 	if _, err := io.Copy(hasher, file); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return "", err
 	}
 
