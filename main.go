@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"flag"
-	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -43,8 +42,8 @@ const BYTE_COUNT = 5
 func main() {
 	log.Println("File Cloud starting up...")
 	flag.StringVar(&fileCloudConfig.bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
-	flag.StringVar(&fileCloudConfig.key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
 	flag.StringVar(&fileCloudConfig.secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
+	flag.StringVar(&fileCloudConfig.key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
 	flag.StringVar(&fileCloudConfig.port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
 	flag.StringVar(&fileCloudConfig.user, "user", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
 	flag.StringVar(&fileCloudConfig.pass, "pass", LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
@@ -74,7 +73,7 @@ func main() {
 	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), router))
+	log.Fatal(http.ListenAndServe(":"+fileCloudConfig.port, router))
 }
 
 func BasicAuthMiddleware(next http.Handler) http.Handler {
@@ -128,7 +127,7 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 		ServeError(writer, err)
 	} else {
 		// TODO Redirect to lookup URL for it
-		writer.Write([]byte(fmt.Sprintf("Got file: %s", handler.Filename)))
+		writer.Write([]byte("Got file: " + handler.Filename))
 	}
 }
 

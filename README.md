@@ -7,6 +7,7 @@ Upload files and get short links.
 - [x] Can `POST` a file
 - [x] Ugh, some kinda logging or something idk
 - [x] Uploads file to S3
+- [ ] Rework s3 file names `<full_hash>/og_filename.txt`
 - [ ] Slap CDN in front of S3
 - [ ] Testing
 - [ ] Wire up drag & drop to POST file and then redirect to it
