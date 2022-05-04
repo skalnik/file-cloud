@@ -13,7 +13,8 @@ import (
 	"net/http"
 	"net/textproto"
 	"os"
-	"text/template"
+	"html/template"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -104,7 +105,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 }
 
 func IndexHandler(writer http.ResponseWriter, request *http.Request) {
-	t, err := template.ParseFiles("index.tmpl.html")
+	t, err := template.ParseFiles("templates/index.tmpl.html")
 	if err != nil {
 		log.Println(err)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -155,8 +156,29 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 
-	log.Printf("%s", *object.ContentType)
-	log.Printf("%s", presign.URL)
+	templateData := struct {
+		Key string
+		Url string
+	} {
+		Key: key,
+		Url: presign.URL,
+	}
+
+	var t *template.Template
+	if strings.Split(*object.ContentType, "/")[0] == "image" {
+		t, err = template.ParseFiles("templates/img.tmpl.html")
+	} else {
+		t, err = template.ParseFiles("templates/file.tmpl.html")
+	}
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+
+	if err = t.Execute(writer, templateData); err != nil {
+		log.Println(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func UploadFile(file multipart.File, header textproto.MIMEHeader) error {
