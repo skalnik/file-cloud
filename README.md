@@ -9,7 +9,7 @@ Upload files and get short links.
 - [x] Uploads file to S3
 - [ ] Testing
 - [ ] Wire up drag & drop to POST file
-- [ ] Can display files
+- [x] Can display files
 - [ ] Looks better
 - [ ] macOS Client
 - [x] Authentication
