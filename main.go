@@ -11,6 +11,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"os"
 	"text/template"
 
@@ -122,7 +123,7 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	defer file.Close()
 
-	err = UploadFile(handler.Filename, file)
+	err = UploadFile(file, handler.Header)
 
 	if err != nil {
 		log.Println(err)
@@ -137,7 +138,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Printf("Got request with URL: %s", request.URL)
 }
 
-func UploadFile(name string, file multipart.File) error {
+func UploadFile(file multipart.File, header textproto.MIMEHeader) error {
 	buffer := &bytes.Buffer{}
 	tee := io.TeeReader(file, buffer)
 	key, err := Filename(tee)
@@ -145,13 +146,15 @@ func UploadFile(name string, file multipart.File) error {
 	if err != nil {
 		return err
 	}
+	contentType := header.Get("Content-Type")
 
 	log.Printf("Uploading file as %s", key)
 
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(fileCloudConfig.bucket),
-		Key:    aws.String(key),
-		Body:   buffer,
+		Bucket:      aws.String(fileCloudConfig.bucket),
+		Key:         aws.String(key),
+		ContentType: aws.String(contentType),
+		Body:        buffer,
 	})
 
 	if err != nil {
