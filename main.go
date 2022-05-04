@@ -63,7 +63,7 @@ func main() {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	router.HandleFunc("/", IndexHandler).Methods("GET")
 	router.HandleFunc("/", UploadHandler).Methods("POST")
-	router.HandleFunc("/{id:[a-zA-Z0-9-_=]+}", LookupHandler)
+	router.HandleFunc("/{key:[a-zA-Z0-9-_=]+}", LookupHandler)
 
 	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
 		log.Println("Setting up without auth...")
@@ -135,7 +135,21 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func LookupHandler(writer http.ResponseWriter, request *http.Request) {
-	log.Printf("Got request with URL: %s", request.URL)
+	vars := mux.Vars(request)
+	key := vars["key"]
+	log.Printf("Got request for key: %s", key)
+
+	response, err := s3.NewPresignClient(s3Client).PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(fileCloudConfig.bucket),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+
+	log.Printf("%s", response.URL)
 }
 
 func UploadFile(file multipart.File, header textproto.MIMEHeader) error {
