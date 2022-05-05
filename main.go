@@ -121,13 +121,13 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	defer file.Close()
 
-	err = UploadFile(file, handler.Header)
+	url, err := UploadFile(file, handler.Header)
 
 	if err != nil {
 		ServeError(writer, err)
 	} else {
-		// TODO Redirect to lookup URL for it
-		writer.Write([]byte("Got file: " + handler.Filename))
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Write([]byte("{\"url\":\"" + url + "\"}"))
 	}
 }
 
@@ -178,13 +178,13 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func UploadFile(file multipart.File, header textproto.MIMEHeader) error {
+func UploadFile(file multipart.File, header textproto.MIMEHeader) (string, error) {
 	buffer := &bytes.Buffer{}
 	tee := io.TeeReader(file, buffer)
 	key, err := Filename(tee)
 
 	if err != nil {
-		return err
+		return "", err
 	}
 	contentType := header.Get("Content-Type")
 
@@ -198,10 +198,10 @@ func UploadFile(file multipart.File, header textproto.MIMEHeader) error {
 	})
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return "/" + key, nil
 }
 
 func Filename(file io.Reader) (string, error) {
