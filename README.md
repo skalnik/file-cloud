@@ -15,5 +15,6 @@ Upload files and get short links.
 - [ ] Looks better
 - [ ] Testing
 - [ ] Slap CDN in front of S3
+- [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [ ] Learn wtf `context.TODO` is and what we should be using instead
 - [ ] macOS Client
