@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"flag"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -37,6 +38,8 @@ type Config struct {
 var s3Client *s3.Client
 var fileCloudConfig Config
 
+const KEY_LENGTH = 5
+
 func main() {
 	log.Println("File Cloud starting up...")
 	flag.StringVar(&fileCloudConfig.bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
@@ -61,7 +64,7 @@ func main() {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	router.HandleFunc("/", IndexHandler).Methods("GET")
 	router.HandleFunc("/", UploadHandler).Methods("POST")
-	router.HandleFunc("/{key:[a-zA-Z0-9-_=]{5,}}", LookupHandler)
+	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), LookupHandler)
 
 	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
 		log.Println("Setting up without auth...")
@@ -217,7 +220,7 @@ func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, e
 		return "", err
 	}
 
-	return "/" + key, nil
+	return "/" + key[0:KEY_LENGTH], nil
 }
 
 func Filename(originalName string, file io.Reader) (string, error) {
