@@ -6,12 +6,13 @@ Upload files and get short links.
 - [x] Can be deployed and work. Works on my [Render](https://render.com)
 - [x] Can `POST` a file
 - [x] Ugh, some kinda logging or something idk
+- [x] Authentication
 - [x] Uploads file to S3
-- [ ] Rework s3 file names `<full_hash>/og_filename.txt`
+- [x] Can display files
+- [ ] Wire up drag & drop to POST file and then redirect to it
+- [ ] Rework s3 file names `<full_hash>/og_filename.txt`. Can match subset of
+    key prefix on lookup
 - [ ] Slap CDN in front of S3
 - [ ] Testing
-- [ ] Wire up drag & drop to POST file and then redirect to it
-- [x] Can display files
 - [ ] Looks better
 - [ ] macOS Client
-- [x] Authentication
