@@ -74,7 +74,7 @@ func main() {
 	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.port)
-	log.Fatal(http.ListenAndServe(":"+fileCloudConfig.port, router))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), router))
 }
 
 func BasicAuthMiddleware(next http.Handler) http.Handler {
@@ -128,7 +128,7 @@ func UploadHandler(writer http.ResponseWriter, request *http.Request) {
 		ServeError(writer, err)
 	} else {
 		writer.Header().Set("Content-Type", "application/json")
-		writer.Write([]byte("{\"url\":\"" + url + "\"}"))
+		writer.Write([]byte(fmt.Sprintf("{\"url\":\"%s\"}", url)))
 	}
 }
 
