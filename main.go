@@ -5,13 +5,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"flag"
 	"html/template"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
-	"net/textproto"
 	"os"
 	"strings"
 
@@ -37,8 +37,6 @@ type Config struct {
 var s3Client *s3.Client
 var fileCloudConfig Config
 
-const BYTE_COUNT = 5
-
 func main() {
 	log.Println("File Cloud starting up...")
 	flag.StringVar(&fileCloudConfig.bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
@@ -63,7 +61,7 @@ func main() {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	router.HandleFunc("/", IndexHandler).Methods("GET")
 	router.HandleFunc("/", UploadHandler).Methods("POST")
-	router.HandleFunc("/{key:[a-zA-Z0-9-_=]+}", LookupHandler)
+	router.HandleFunc("/{key:[a-zA-Z0-9-_=]{5,}}", LookupHandler)
 
 	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
 		log.Println("Setting up without auth...")
@@ -114,14 +112,14 @@ func IndexHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func UploadHandler(writer http.ResponseWriter, request *http.Request) {
-	file, handler, err := request.FormFile("file")
+	file, header, err := request.FormFile("file")
 	if err != nil {
 		ServeError(writer, err)
 		return
 	}
 	defer file.Close()
 
-	url, err := UploadFile(file, handler.Header)
+	url, err := UploadFile(file, *header)
 
 	if err != nil {
 		ServeError(writer, err)
@@ -135,11 +133,29 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	key := vars["key"]
 
-	input := &s3.GetObjectInput{
-		Bucket: aws.String(fileCloudConfig.bucket),
-		Key:    aws.String(key),
+	listInput := &s3.ListObjectsV2Input{
+		Bucket:  aws.String(fileCloudConfig.bucket),
+		Prefix:  aws.String(key),
+		MaxKeys: 1,
 	}
 
+	objectList, err := s3Client.ListObjectsV2(context.TODO(), listInput)
+	if err != nil {
+		ServeError(writer, err)
+		return
+	}
+	if objectList.KeyCount < 1 {
+		//TODO Serve 404 page
+		ServeError(writer, errors.New("No object found for key"))
+		return
+	}
+
+	objectKey := *objectList.Contents[0].Key
+
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(fileCloudConfig.bucket),
+		Key:    aws.String(objectKey),
+	}
 	presign, err := s3.NewPresignClient(s3Client).PresignGetObject(context.TODO(), input)
 	if err != nil {
 		ServeError(writer, err)
@@ -147,7 +163,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	object, err := s3Client.GetObject(context.TODO(), input)
 	if err != nil {
-		//TODO Serve 404 page
+		//TODO Serve 404 page, again? I guess!?
 		ServeError(writer, err)
 		return
 	}
@@ -178,15 +194,15 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func UploadFile(file multipart.File, header textproto.MIMEHeader) (string, error) {
+func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
 	buffer := &bytes.Buffer{}
 	tee := io.TeeReader(file, buffer)
-	key, err := Filename(tee)
+	key, err := Filename(fileHeader.Filename, tee)
 
 	if err != nil {
 		return "", err
 	}
-	contentType := header.Get("Content-Type")
+	contentType := fileHeader.Header.Get("Content-Type")
 
 	log.Printf("Uploading file as %s", key)
 
@@ -204,7 +220,7 @@ func UploadFile(file multipart.File, header textproto.MIMEHeader) (string, error
 	return "/" + key, nil
 }
 
-func Filename(file io.Reader) (string, error) {
+func Filename(originalName string, file io.Reader) (string, error) {
 	hasher := sha256.New()
 
 	if _, err := io.Copy(hasher, file); err != nil {
@@ -213,7 +229,8 @@ func Filename(file io.Reader) (string, error) {
 	}
 
 	hash := hasher.Sum(nil)
-	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash[0:BYTE_COUNT]), nil
+	filename := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash) + "/" + originalName
+	return filename, nil
 }
 
 func ServeError(writer http.ResponseWriter, err error) {
