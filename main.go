@@ -220,7 +220,7 @@ func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, e
 		return "", err
 	}
 
-	return "/" + key[0:KEY_LENGTH], nil
+	return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
 }
 
 func Filename(originalName string, file io.Reader) (string, error) {
@@ -232,12 +232,13 @@ func Filename(originalName string, file io.Reader) (string, error) {
 	}
 
 	hash := hasher.Sum(nil)
-	filename := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash) + "/" + originalName
+	encodedHash := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash)
+	filename := fmt.Sprintf("%s/%s", encodedHash, originalName)
 	return filename, nil
 }
 
 func ServeError(writer http.ResponseWriter, err error) {
-	log.Println("\033[31m" + err.Error() + "\033[0m")
+	log.Printf("\033[31m%s\033[0m", err.Error())
 	http.Error(writer, err.Error(), http.StatusInternalServerError)
 }
 
