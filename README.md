@@ -12,7 +12,8 @@ Upload files and get short links.
 - [x] Wire up drag & drop to POST file and then redirect to it
 - [x] Rework s3 file names `<full_hash>/og_filename.txt`. Can match subset of
     key prefix on lookup
-- [ ] Looks better
+- [x] Looks better
+- [ ] No auth required to view
 - [ ] Testing
 - [ ] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
