@@ -8,13 +8,15 @@ body {
 
 h1 {
   padding: .5em;
+  margin: 0;
 }
 
 #drop-zone {
-  margin: 1em;
+  border: 5px dashed #ccc;
+  border-radius: 30px;
+  margin: 0 1em 1em 1em;
   display: grid;
   place-items: center;
-  border: 5px solid red;
 }
 
 #drop-zone .hover-text {
@@ -25,7 +27,7 @@ h1 {
 }
 
 #drop-zone.hover {
-  border: 5px solid blue;
+  border-color: blue;
 }
 
 #drop-zone.hover .hover-text {
