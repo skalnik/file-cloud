@@ -163,13 +163,14 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 		ServeError(writer, err)
 		return
 	}
+	originalName := strings.Split(objectKey, "/")[1]
 
 	templateData := struct {
-		Key string
-		Url string
+		OriginalName string
+		Url          string
 	}{
-		Key: key,
-		Url: presign.URL,
+		OriginalName: originalName,
+		Url:          presign.URL,
 	}
 
 	var templateToRender string

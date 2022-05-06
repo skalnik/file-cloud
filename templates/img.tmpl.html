@@ -1,8 +1,10 @@
 {{ define "title" }}
-File Cloud &mdash; {{.Key}}
+File Cloud &mdash; {{.OriginalName}}
 {{ end }}
 
 {{ define "body" }}
+<h1><a href="/">File Cloud</a> &mdash; {{.OriginalName}}</h1>
+
 <div id="img">
   <img src="{{.Url}}" />
 </div>
