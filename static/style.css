@@ -11,12 +11,16 @@ h1 {
   margin: 0;
 }
 
-#drop-zone {
-  border: 5px dashed #ccc;
-  border-radius: 30px;
+
+#file, #img, #drop-zone {
   margin: 0 1em 1em 1em;
   display: grid;
   place-items: center;
+}
+
+#drop-zone {
+  border: 5px dashed #ccc;
+  border-radius: 30px;
 }
 
 #drop-zone .hover-text {
@@ -24,6 +28,9 @@ h1 {
 }
 #drop-zone .default-text {
   display: revert;
+}
+#drop-zone .default-text p {
+  margin: 0;
 }
 
 #drop-zone.hover {

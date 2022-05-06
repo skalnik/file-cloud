@@ -1,18 +1,12 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>File Cloud</title>
-    <script type="text/javascript" src="static/app.js"></script>
-    <link rel="stylesheet" href="static/pico.min.css">
-    <link rel="stylesheet" href="static/style.css" />
-  </head>
-  <body>
-    <h1>File Cloud</h1>
-    <div id="drop-zone">
-      <div class="default-text">
-        <p>Feed me files</p>
-      </div>
-      <span class="hover-text">Drop to upload!</span>
-    </div>
-  </body>
-</html>
+{{ define "title" }}
+File Cloud
+{{ end }}
+
+{{ define "body" }}
+<div id="drop-zone">
+  <div class="default-text">
+    <p>Feed me files</p>
+  </div>
+  <span class="hover-text">Drop to upload!</span>
+</div>
+{{ end }}

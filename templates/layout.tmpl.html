@@ -1,0 +1,15 @@
+{{ define "layout" }}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ template "title" . }}</title>
+    <script type="text/javascript" src="static/app.js"></script>
+    <link rel="stylesheet" href="static/pico.min.css">
+    <link rel="stylesheet" href="static/style.css" />
+  </head>
+  <body>
+    <h1>{{ template "title" . }}</h1>
+    {{ template "body" . }}
+  </body>
+</html>
+{{ end }}

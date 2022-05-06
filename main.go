@@ -54,7 +54,6 @@ func main() {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(creds), config.WithRegion("us-west-1"))
 	if err != nil {
 		log.Fatal("Couldn't load S3 Credentials")
-		os.Exit(1)
 	}
 
 	s3Client = s3.NewFromConfig(cfg)
@@ -105,13 +104,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 }
 
 func IndexHandler(writer http.ResponseWriter, request *http.Request) {
-	t, err := template.ParseFiles("templates/index.tmpl.html")
-	if err != nil {
-		ServeError(writer, err)
-	}
-	if err := t.Execute(writer, ""); err != nil {
-		ServeError(writer, err)
-	}
+	ServeTemplate(writer, "index", "")
 }
 
 func UploadHandler(writer http.ResponseWriter, request *http.Request) {
@@ -179,22 +172,15 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 		Url: presign.URL,
 	}
 
-	var t *template.Template
+	var templateToRender string
+
 	if strings.Split(*object.ContentType, "/")[0] == "image" {
-		t, err = template.ParseFiles("templates/img.tmpl.html")
+		templateToRender = "img"
 	} else {
-		t, err = template.ParseFiles("templates/file.tmpl.html")
-	}
-	if err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		templateToRender = "file"
 	}
 
-	if err = t.Execute(writer, templateData); err != nil {
-		log.Println(err)
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-	}
+	ServeTemplate(writer, templateToRender, templateData)
 }
 
 func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
@@ -240,6 +226,19 @@ func Filename(originalName string, file io.Reader) (string, error) {
 func ServeError(writer http.ResponseWriter, err error) {
 	log.Printf("\033[31m%s\033[0m", err.Error())
 	http.Error(writer, err.Error(), http.StatusInternalServerError)
+}
+
+func ServeTemplate(writer http.ResponseWriter, name string, data interface{}) {
+	t, err := template.ParseFiles("templates/layout.tmpl.html", fmt.Sprintf("templates/%s.tmpl.html", name))
+	if err != nil {
+		ServeError(writer, err)
+		return
+	}
+
+	err = t.ExecuteTemplate(writer, "layout", data)
+	if err != nil {
+		ServeError(writer, err)
+	}
 }
 
 func LookupEnvDefault(envKey, defaultValue string) string {
