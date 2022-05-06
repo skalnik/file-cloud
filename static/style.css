@@ -7,19 +7,23 @@ body {
 }
 
 h1 {
+  background-color: var(--card-background-color);
+  box-shadow: var(--card-box-shadow);
   padding: .5em;
   margin: 0;
 }
 
-#file, #img, #drop-zone {
-  margin: 0 1em 1em 1em;
+#drop-zone {
+  border: 5px dashed;
+  border-radius: 30px;
+  transition: border-color 0.2s ease-in-out;
   display: grid;
   place-items: center;
+  margin: 1rem;
 }
 
-#drop-zone {
-  border: 5px dashed #ccc;
-  border-radius: 30px;
+#file, #img {
+  margin: 1rem auto;
 }
 
 #drop-zone .hover-text {
@@ -33,7 +37,7 @@ h1 {
 }
 
 #drop-zone.hover {
-  border-color: blue;
+  border-color: var(--primary);
 }
 
 #drop-zone.hover .hover-text {
