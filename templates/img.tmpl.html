@@ -3,7 +3,12 @@ File Cloud &mdash; {{.OriginalName}}
 {{ end }}
 
 {{ define "body" }}
-<h1><a href="/">File Cloud</a> &mdash; {{.OriginalName}}</h1>
+<header>
+  <hgroup>
+    <h1>File Cloud</h1>
+    <h2>{{.OriginalName}}</h2>
+  </hgroup>
+</header>
 
 <div id="img">
   <img src="{{.Url}}" />

@@ -1,3 +1,8 @@
+:root {
+  --spacing: 0;
+  --typography-spacing-vertical: 0;
+}
+
 body {
   padding: 0;
   margin: 0;
@@ -6,11 +11,28 @@ body {
   grid-template-rows: auto 1fr auto;
 }
 
-h1 {
+header {
   background-color: var(--card-background-color);
   box-shadow: var(--card-box-shadow);
-  padding: .5em;
-  margin: 0;
+  padding: .5rem 1rem !important;
+}
+
+h1 {
+  --typography-spacing-vertical: 0;
+}
+
+hgroup  {
+  display: grid;
+  grid-template-columns: 50% 50%;
+}
+
+hgroup h1, hgroup h2 {
+  align-self: center;
+  justify-self: start;
+}
+
+hgroup h2 {
+  justify-self: end;
 }
 
 #drop-zone {
