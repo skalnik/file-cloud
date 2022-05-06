@@ -61,22 +61,23 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(LoggingMiddleware)
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
-	router.HandleFunc("/", IndexHandler).Methods("GET")
-	router.HandleFunc("/", UploadHandler).Methods("POST")
 	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), LookupHandler)
 
 	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
 		log.Println("Setting up without auth...")
+		router.HandleFunc("/", IndexHandler).Methods("GET")
+		router.HandleFunc("/", UploadHandler).Methods("POST")
 	} else {
 		log.Println("Setting up with basic auth...")
-		router.Use(BasicAuthMiddleware)
+		router.HandleFunc("/", BasicAuthMiddleware(IndexHandler)).Methods("GET")
+		router.HandleFunc("/", BasicAuthMiddleware(UploadHandler)).Methods("POST")
 	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), router))
 }
 
-func BasicAuthMiddleware(next http.Handler) http.Handler {
+func BasicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		user, pass, ok := request.BasicAuth()
 
