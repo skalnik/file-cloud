@@ -164,7 +164,12 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 		ServeError(writer, err)
 		return
 	}
-	originalName := strings.Split(objectKey, "/")[1]
+	parts := strings.Split(objectKey, "/")
+	if len(parts) < 2 {
+		ServeError(writer, errors.New("Invalid S3 key found"))
+		return
+	}
+	originalName := parts[1]
 
 	templateData := struct {
 		OriginalName string
