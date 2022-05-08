@@ -48,6 +48,11 @@ hgroup h2 {
   margin: 1rem auto;
 }
 
+#img a img {
+  max-width: 100%;
+  max-height: 100vh;
+}
+
 #drop-zone .hover-text {
   display: none;
 }

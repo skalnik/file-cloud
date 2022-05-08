@@ -13,7 +13,8 @@ Upload files and get short links.
 - [x] Rework s3 file names `<full_hash>/og_filename.txt`. Can match subset of
     key prefix on lookup
 - [x] Looks better
-- [ ] No auth required to view
+- [x] No auth required to view
+- [x] Images are sized well for browser
 - [ ] Testing
 - [ ] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
