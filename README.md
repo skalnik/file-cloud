@@ -16,7 +16,7 @@ Upload files and get short links.
 - [x] No auth required to view
 - [x] Images are sized well for browser
 - [ ] Testing
-- [ ] 404 Page
+- [x] 404 Page
 - [ ] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [ ] Learn wtf `context.TODO` is and what we should be using instead

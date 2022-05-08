@@ -44,6 +44,16 @@ hgroup h2 {
   margin: 1rem;
 }
 
+#missing {
+  display: grid;
+  place-items: center;
+  margin: 1rem;
+}
+
+#missing > p {
+  font-size: 10rem !important;
+}
+
 #file, #img {
   margin: 1rem auto;
 }

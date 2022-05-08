@@ -142,8 +142,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if objectList.KeyCount < 1 {
-		//TODO Serve 404 page
-		ServeError(writer, errors.New("No object found for key"))
+		ServeTemplate(writer, "404", "")
 		return
 	}
 
@@ -160,8 +159,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	object, err := s3Client.GetObject(context.TODO(), input)
 	if err != nil {
-		//TODO Serve 404 page, again? I guess!?
-		ServeError(writer, err)
+		ServeTemplate(writer, "404", "")
 		return
 	}
 	parts := strings.Split(objectKey, "/")
