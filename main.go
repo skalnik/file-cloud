@@ -174,20 +174,14 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	templateData := struct {
 		OriginalName string
 		Url          string
+		Image        bool
 	}{
 		OriginalName: originalName,
 		Url:          presign.URL,
+		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
 
-	var templateToRender string
-
-	if strings.Split(*object.ContentType, "/")[0] == "image" {
-		templateToRender = "img"
-	} else {
-		templateToRender = "file"
-	}
-
-	ServeTemplate(writer, templateToRender, templateData)
+	ServeTemplate(writer, "file", templateData)
 }
 
 func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {

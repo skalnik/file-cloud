@@ -3,14 +3,22 @@ File Cloud &mdash; {{.OriginalName}}
 {{ end }}
 
 {{ define "body" }}
-<header>
-  <hgroup>
-    <h1>File Cloud</h1>
-    <h2>{{.OriginalName}}</h2>
-  </hgroup>
-</header>
+  <header>
+    <hgroup>
+      <h1>File Cloud</h1>
+      <h2>{{.OriginalName}}</h2>
+    </hgroup>
+  </header>
 
-<div id="file">
-  <a href="{{.Url}}">Click here to download</a>
-</div>
+  {{ if .Image }}
+    <div id="img">
+      <a href="{{.Url}}">
+        <img src="{{.Url}}" />
+      </a>
+    </div>
+  {{ else }}
+    <div id="file">
+      <a href="{{.Url}}">Click here to download</a>
+    </div>
+  {{ end }}
 {{ end }}
