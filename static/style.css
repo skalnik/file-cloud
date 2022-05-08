@@ -53,6 +53,11 @@ hgroup h2 {
   max-height: 100vh;
 }
 
+#drop-zone[aria-busy='true'] .hover-text,
+#drop-zone[aria-busy='true'] .default-text {
+  display: none;
+}
+
 #drop-zone .hover-text {
   display: none;
 }

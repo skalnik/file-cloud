@@ -30,8 +30,8 @@ function dropHandler(event) {
 
 function uploadFile(file) {
   const formData = new FormData();
-  formData.append("file", event.dataTransfer.files[0])
-  event.target.classList.add("uploading");
+  formData.append("file", event.dataTransfer.files[0]);
+  event.target.setAttribute('aria-busy', true);
   fetch("/", {
     method: "POST",
     body: formData,
