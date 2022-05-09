@@ -61,6 +61,7 @@ func main() {
 	router := mux.NewRouter()
 	router.Use(LoggingMiddleware)
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	router.HandleFunc("/healthz", HealthHandler)
 	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), LookupHandler)
 
 	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
@@ -180,6 +181,10 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	ServeTemplate(writer, "file", templateData)
+}
+
+func HealthHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.WriteHeader(http.StatusNoContent)
 }
 
 func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
