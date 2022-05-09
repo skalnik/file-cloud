@@ -19,6 +19,7 @@ Upload files and get short links.
 - [x] Images are sized well for browser
 - [x] 404 Page
 - [ ] Testing
+- [ ] Maybe not One Big File 😬
 - [ ] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [ ] Learn wtf `context.TODO` is and what we should be using instead
