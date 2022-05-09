@@ -2,8 +2,10 @@
 
 Upload files and get short links.
 
+## To Do
+
 - [x] HTTP works
-- [x] Can be deployed and work. Works on my [Render](https://render.com)
+- [x] Can be [deployed](https://render.com) and work
 - [x] Can `POST` a file
 - [x] Ugh, some kinda logging or something idk
 - [x] Authentication
@@ -15,8 +17,8 @@ Upload files and get short links.
 - [x] Looks better
 - [x] No auth required to view
 - [x] Images are sized well for browser
-- [ ] Testing
 - [x] 404 Page
+- [ ] Testing
 - [ ] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [ ] Learn wtf `context.TODO` is and what we should be using instead
