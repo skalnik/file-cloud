@@ -6,6 +6,9 @@
     <script type="text/javascript" src="static/app.js"></script>
     <link rel="stylesheet" href="static/pico.min.css">
     <link rel="stylesheet" href="static/style.css" />
+    {{ if .Plausible }}
+      <script defer data-domain="{{ .Plausible }}" src="https://plausible.io/js/plausible.js"></script>
+    {{ end }}
   </head>
   <body>
     {{ template "body" . }}

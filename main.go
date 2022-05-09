@@ -25,14 +25,21 @@ import (
 
 type Config struct {
 	// AWS
-	bucket string
-	key    string
-	secret string
+	Bucket string
+	Key    string
+	Secret string
 	// Basic Auth
-	user string
-	pass string
+	User string
+	Pass string
 	// General
-	port string // https://twitter.com/keith_duncan/status/638582305917833217
+	Port      string // https://twitter.com/keith_duncan/status/638582305917833217
+	Plausible string // Plausible domain
+}
+
+type TemplateData struct {
+	OriginalName string
+	Url          string
+	Image        bool
 }
 
 var s3Client *s3.Client
@@ -42,15 +49,16 @@ const KEY_LENGTH = 5
 
 func main() {
 	log.Println("File Cloud starting up...")
-	flag.StringVar(&fileCloudConfig.bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
-	flag.StringVar(&fileCloudConfig.secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
-	flag.StringVar(&fileCloudConfig.key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
-	flag.StringVar(&fileCloudConfig.port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
-	flag.StringVar(&fileCloudConfig.user, "user", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
-	flag.StringVar(&fileCloudConfig.pass, "pass", LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
+	flag.StringVar(&fileCloudConfig.Bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
+	flag.StringVar(&fileCloudConfig.Secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
+	flag.StringVar(&fileCloudConfig.Key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
+	flag.StringVar(&fileCloudConfig.Port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
+	flag.StringVar(&fileCloudConfig.User, "user", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
+	flag.StringVar(&fileCloudConfig.Pass, "pass", LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
+	flag.StringVar(&fileCloudConfig.Plausible, "plausible", LookupEnvDefault("PLAUSIBLE", ""), "The domain setup for Plausible. Leave blank to disable")
 	flag.Parse()
 
-	creds := credentials.NewStaticCredentialsProvider(fileCloudConfig.key, fileCloudConfig.secret, "")
+	creds := credentials.NewStaticCredentialsProvider(fileCloudConfig.Key, fileCloudConfig.Secret, "")
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithCredentialsProvider(creds), config.WithRegion("us-west-1"))
 	if err != nil {
 		log.Fatal("Couldn't load S3 Credentials")
@@ -64,7 +72,7 @@ func main() {
 	router.HandleFunc("/healthz", HealthHandler)
 	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), LookupHandler)
 
-	if fileCloudConfig.user == "" && fileCloudConfig.pass == "" {
+	if fileCloudConfig.User == "" && fileCloudConfig.Pass == "" {
 		log.Println("Setting up without auth...")
 		router.HandleFunc("/", IndexHandler).Methods("GET")
 		router.HandleFunc("/", UploadHandler).Methods("POST")
@@ -74,8 +82,8 @@ func main() {
 		router.HandleFunc("/", BasicAuthMiddleware(UploadHandler)).Methods("POST")
 	}
 
-	log.Printf("Listening on port %s", fileCloudConfig.port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.port), router))
+	log.Printf("Listening on port %s", fileCloudConfig.Port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.Port), router))
 }
 
 func BasicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -85,7 +93,7 @@ func BasicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if !ok {
 			log.Println("Couldn't parse basic auth")
 		} else {
-			if user == fileCloudConfig.user && pass == fileCloudConfig.pass {
+			if user == fileCloudConfig.User && pass == fileCloudConfig.Pass {
 				next.ServeHTTP(writer, request)
 				return
 			} else {
@@ -106,7 +114,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 }
 
 func IndexHandler(writer http.ResponseWriter, request *http.Request) {
-	ServeTemplate(writer, "index", "")
+	ServeTemplate(writer, "index", TemplateData{})
 }
 
 func UploadHandler(writer http.ResponseWriter, request *http.Request) {
@@ -132,7 +140,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	key := vars["key"]
 
 	listInput := &s3.ListObjectsV2Input{
-		Bucket:  aws.String(fileCloudConfig.bucket),
+		Bucket:  aws.String(fileCloudConfig.Bucket),
 		Prefix:  aws.String(key),
 		MaxKeys: 1,
 	}
@@ -143,14 +151,14 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if objectList.KeyCount < 1 {
-		ServeTemplate(writer, "404", "")
+		ServeTemplate(writer, "404", TemplateData{})
 		return
 	}
 
 	objectKey := *objectList.Contents[0].Key
 
 	input := &s3.GetObjectInput{
-		Bucket: aws.String(fileCloudConfig.bucket),
+		Bucket: aws.String(fileCloudConfig.Bucket),
 		Key:    aws.String(objectKey),
 	}
 	presign, err := s3.NewPresignClient(s3Client).PresignGetObject(context.TODO(), input)
@@ -160,7 +168,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	object, err := s3Client.GetObject(context.TODO(), input)
 	if err != nil {
-		ServeTemplate(writer, "404", "")
+		ServeTemplate(writer, "404", TemplateData{})
 		return
 	}
 	parts := strings.Split(objectKey, "/")
@@ -170,11 +178,7 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	originalName := parts[1]
 
-	templateData := struct {
-		OriginalName string
-		Url          string
-		Image        bool
-	}{
+	templateData := TemplateData{
 		OriginalName: originalName,
 		Url:          presign.URL,
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
@@ -200,7 +204,7 @@ func UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, e
 	log.Printf("Uploading file as %s", key)
 
 	_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket:      aws.String(fileCloudConfig.bucket),
+		Bucket:      aws.String(fileCloudConfig.Bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
 		Body:        buffer,
@@ -232,14 +236,22 @@ func ServeError(writer http.ResponseWriter, err error) {
 	http.Error(writer, err.Error(), http.StatusInternalServerError)
 }
 
-func ServeTemplate(writer http.ResponseWriter, name string, data interface{}) {
+func ServeTemplate(writer http.ResponseWriter, name string, data TemplateData) {
 	t, err := template.ParseFiles("templates/layout.tmpl.html", fmt.Sprintf("templates/%s.tmpl.html", name))
 	if err != nil {
 		ServeError(writer, err)
 		return
 	}
 
-	err = t.ExecuteTemplate(writer, "layout", data)
+	templateData := struct {
+		Plausible string
+		TemplateData
+	}{
+		Plausible:    fileCloudConfig.Plausible,
+		TemplateData: data,
+	}
+
+	err = t.ExecuteTemplate(writer, "layout", templateData)
 	if err != nil {
 		ServeError(writer, err)
 	}
