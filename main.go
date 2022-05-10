@@ -51,15 +51,15 @@ func main() {
 		router.HandleFunc("/", UploadHandler).Methods("POST")
 	} else {
 		log.Println("Setting up with basic auth...")
-		router.HandleFunc("/", BasicAuthMiddleware(IndexHandler)).Methods("GET")
-		router.HandleFunc("/", BasicAuthMiddleware(UploadHandler)).Methods("POST")
+		router.HandleFunc("/", BasicAuthWrapper(IndexHandler)).Methods("GET")
+		router.HandleFunc("/", BasicAuthWrapper(UploadHandler)).Methods("POST")
 	}
 
 	log.Printf("Listening on port %s", fileCloudConfig.Port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", fileCloudConfig.Port), router))
 }
 
-func BasicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		user, pass, ok := request.BasicAuth()
 
@@ -81,7 +81,7 @@ func BasicAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		log.Printf("Handling %s %s", request.Method, request.URL)
+		log.Printf("%s %s %s", request.RemoteAddr, request.Method, request.URL)
 		next.ServeHTTP(writer, request)
 	})
 }
