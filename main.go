@@ -114,17 +114,11 @@ func LookupHandler(writer http.ResponseWriter, request *http.Request) {
 
 	file, err := awsClient.LookupFile(key)
 
-	if errors.Is(err, ErrorObjectMissing) {
-		ServeTemplate(writer, "404", StoredFile{})
-		return
-	}
-
 	if err != nil {
 		ServeError(writer, err)
-		return
+	} else {
+		ServeTemplate(writer, "file", file)
 	}
-
-	ServeTemplate(writer, "file", file)
 }
 
 func HealthHandler(writer http.ResponseWriter, request *http.Request) {
@@ -133,7 +127,13 @@ func HealthHandler(writer http.ResponseWriter, request *http.Request) {
 
 func ServeError(writer http.ResponseWriter, err error) {
 	log.Printf("\033[31m%s\033[0m", err.Error())
-	http.Error(writer, err.Error(), http.StatusInternalServerError)
+
+	if errors.Is(err, ErrorObjectMissing) {
+		writer.WriteHeader(http.StatusNotFound)
+		ServeTemplate(writer, "404", StoredFile{})
+	} else {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func ServeTemplate(writer http.ResponseWriter, name string, data StoredFile) {
