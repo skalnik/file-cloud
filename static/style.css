@@ -35,18 +35,19 @@ hgroup h2 {
   justify-self: end;
 }
 
+#drop-zone, #missing, #img {
+  display: grid;
+  place-items: center;
+}
+
 #drop-zone {
   border: 5px dashed;
   border-radius: 30px;
   transition: border-color 0.2s ease-in-out;
-  display: grid;
-  place-items: center;
   margin: 1rem;
 }
 
 #missing {
-  display: grid;
-  place-items: center;
   margin: 1rem;
 }
 
@@ -56,11 +57,12 @@ hgroup h2 {
 
 #file, #img {
   margin: 1rem auto;
+  padding: 0 5rem;
 }
 
 #img a img {
   max-width: 100%;
-  max-height: 100vh;
+  max-height: 100%;
 }
 
 #drop-zone[aria-busy='true'] .hover-text,
