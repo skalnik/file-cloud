@@ -24,3 +24,20 @@ Upload files and get short links.
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [ ] Learn wtf `context.TODO` is and what we should be using instead
 - [ ] macOS Client
+
+
+## It's beautiful, how do I run it?
+
+1. Step up an S3 Bucket in US-West-1 (maybe this should be configurable)
+2. `make build` will give you an `app` executable you can deploy where ever
+3. Run it with some environment variables (or pass as flags):
+  - `PORT`: What port to listen on
+  - `KEY`: An AWS key
+  - `SECRET`: An AWS secret
+  - `BUCKET`: The S3 bucket to store content in
+  - `USER` (Optional): A username to secure uploading behind with basic
+      authentication
+  - `PASS` (Optional): A password to secure uploading behind with basic
+      authentication
+  - `PLAUSIBLE` (Optional): A domain to use with
+      [Plausible](https://plausible.io/) for metrics
