@@ -81,7 +81,7 @@ func BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		log.Printf("%s %s from %s", request.Method, request.URL, request.RemoteAddr)
+		log.Printf("%s %s", request.Method, request.URL)
 		next.ServeHTTP(writer, request)
 	})
 }
