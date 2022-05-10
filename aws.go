@@ -58,7 +58,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 
 	log.Printf("Uploading file as %s", key)
 
-	_, err = awsClient.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+	_, err = awsClient.S3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:      aws.String(awsClient.Bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
@@ -79,7 +79,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		MaxKeys: 1,
 	}
 
-	objectList, err := awsClient.S3Client.ListObjectsV2(context.TODO(), listInput)
+	objectList, err := awsClient.S3Client.ListObjectsV2(context.Background(), listInput)
 	if err != nil {
 		return StoredFile{}, err
 	}
@@ -120,7 +120,6 @@ func Filename(originalName string, file io.Reader) (string, error) {
 	hasher := sha256.New()
 
 	if _, err := io.Copy(hasher, file); err != nil {
-		log.Println(err)
 		return "", err
 	}
 
