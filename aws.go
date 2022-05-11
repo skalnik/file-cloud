@@ -22,6 +22,7 @@ type AWSClient struct {
 	Bucket   string
 	Key      string
 	Secret   string
+	CDN      string
 	S3Client *s3.Client
 }
 
@@ -94,9 +95,17 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Bucket: aws.String(awsClient.Bucket),
 		Key:    aws.String(objectKey),
 	}
-	presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
-	if err != nil {
-		return StoredFile{}, err
+
+	var url string
+	if awsClient.CDN == "" {
+		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
+		if err != nil {
+			return StoredFile{}, err
+		}
+
+		url = presign.URL
+	} else {
+		url = fmt.Sprintf("%s/%s", awsClient.CDN, objectKey)
 	}
 
 	object, err := awsClient.S3Client.GetObject(context.Background(), input)
@@ -110,7 +119,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 
 	file := StoredFile{
 		OriginalName: parts[1],
-		Url:          presign.URL,
+		Url:          url,
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
 	return file, nil

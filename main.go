@@ -31,9 +31,10 @@ func main() {
 	flag.StringVar(&awsClient.Bucket, "bucket", LookupEnvDefault("BUCKET", "file-cloud"), "AWS S3 Bucket name to store files in")
 	flag.StringVar(&awsClient.Secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
 	flag.StringVar(&awsClient.Key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
+	flag.StringVar(&awsClient.CDN, "cdn", LookupEnvDefault("CDN", "https://acab123.cloudfront.net"), "CDN URL to use for with object keys. Leave blank to use presigned S3 URLs")
 	flag.StringVar(&fileCloudConfig.Port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on") // https://twitter.com/keith_duncan/status/638582305917833217
-	flag.StringVar(&fileCloudConfig.User, "user", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
-	flag.StringVar(&fileCloudConfig.Pass, "pass", LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
+	flag.StringVar(&fileCloudConfig.User, "username", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
+	flag.StringVar(&fileCloudConfig.Pass, "password", LookupEnvDefault("PASSWORD", ""), "A password for basic auth. Leave blank (along with user) to disable")
 	flag.StringVar(&fileCloudConfig.Plausible, "plausible", LookupEnvDefault("PLAUSIBLE", ""), "The domain setup for Plausible. Leave blank to disable")
 	flag.Parse()
 

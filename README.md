@@ -21,8 +21,8 @@ Upload files and get short links.
 - [x] Testing
 - [x] Maybe not One Big File 😬
 - [ ] Ok test more critical things lmao
-- [ ] Links should expand images in like Slack and shit
-- [ ] Slap CDN in front of S3
+- [x] Links should expand images in like Slack and shit
+- [x] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [x] Learn wtf `context.TODO` is and what we should be using instead
 - [ ] Imma have to make some kinda listing shit, aren't I?
@@ -38,9 +38,11 @@ Upload files and get short links.
   - `KEY`: An AWS key
   - `SECRET`: An AWS secret
   - `BUCKET`: The S3 bucket to store content in
-  - `USER` (Optional): A username to secure uploading behind with basic
+  - `CDN` (Optional): A CDN URL to use with your S3 object keys. If blank, will
+      use pre-signed S3 URLs instead.
+  - `USERNAME` (Optional): A username to secure uploading behind with basic
       authentication
-  - `PASS` (Optional): A password to secure uploading behind with basic
+  - `PASSWORD` (Optional): A password to secure uploading behind with basic
       authentication
   - `PLAUSIBLE` (Optional): A domain to use with
       [Plausible](https://plausible.io/) for metrics
