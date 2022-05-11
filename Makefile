@@ -1,9 +1,12 @@
 BINARY_NAME=app
 
-all: build
+all: test build
 
 build:
 	go build -o ${BINARY_NAME} main.go aws.go
+
+test:
+	go test -v
 
 run:
 	go build -o ${BINARY_NAME} main.go aws.go

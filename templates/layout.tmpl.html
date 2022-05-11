@@ -9,6 +9,8 @@
     {{ if .Plausible }}
       <script defer data-domain="{{ .Plausible }}" src="https://plausible.io/js/plausible.js"></script>
     {{ end }}
+
+    {{ block "meta" . }}{{ end }}
   </head>
   <body>
     {{ template "body" . }}

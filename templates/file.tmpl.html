@@ -2,6 +2,12 @@
 File Cloud &mdash; {{.OriginalName}}
 {{ end }}
 
+{{ define "meta" }}
+<meta property="og:type" content="website" />
+<meta property="og:title" content="File Cloud &mdash; {{.OriginalName}}" />
+<meta property="og:image" content="{{.Url}}" />
+{{ end }}
+
 {{ define "body" }}
   <header>
     <hgroup>
