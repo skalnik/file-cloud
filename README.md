@@ -18,11 +18,14 @@ Upload files and get short links.
 - [x] No auth required to view
 - [x] Images are sized well for browser
 - [x] 404 Page
-- [ ] Testing
-- [ ] Maybe not One Big File 😬
+- [x] Testing
+- [x] Maybe not One Big File 😬
+- [ ] Ok test more critical things lmao
+- [ ] Links should expand images in like Slack and shit
 - [ ] Slap CDN in front of S3
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
-- [ ] Learn wtf `context.TODO` is and what we should be using instead
+- [x] Learn wtf `context.TODO` is and what we should be using instead
+- [ ] Imma have to make some kinda listing shit, aren't I?
 - [ ] macOS Client
 
 
