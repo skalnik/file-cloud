@@ -26,12 +26,12 @@ Upload files and get short links.
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [x] Learn wtf `context.TODO` is and what we should be using instead
 - [ ] Imma have to make some kinda listing shit, aren't I?
-- [ ] macOS Client
+- [x] [macOS Client](https://github.com/skalnik/file-cloud-app)
 
 
 ## It's beautiful, how do I run it?
 
-1. Step up an S3 Bucket in US-West-1 (maybe this should be configurable)
+1. Step up an S3 Bucket in us-west-1 (maybe this should be configurable)
 2. `make build` will give you an `app` executable you can deploy where ever
 3. Run it with some environment variables (or pass as flags):
   - `PORT`: What port to listen on
