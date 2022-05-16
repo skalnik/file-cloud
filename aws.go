@@ -57,7 +57,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	}
 	contentType := fileHeader.Header.Get("Content-Type")
 
-	log.Printf("Uploading file as %s", key)
+	log.Printf("Uploading file as %s with key %s", contentType, key)
 
 	_, err = awsClient.S3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:      aws.String(awsClient.Bucket),
