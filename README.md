@@ -4,7 +4,8 @@ Upload files and get short links.
 
 ## It's beautiful, how do I run it?
 
-1. Step up an S3 Bucket in us-west-1 (maybe this should be configurable)
+1. Step up an S3 bucket in us-west-1 (maybe this should be configurable).
+   Optionally, set up a CloudFront distribution for that bucket.
 2. `make build` will give you an `app` executable you can deploy where ever
 3. Run it with some environment variables (or pass as flags):
   - `PORT`: What port to listen on
