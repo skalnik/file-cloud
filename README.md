@@ -50,6 +50,8 @@ you're concerned about hash collisions.
 - [x] 404 Page
 - [x] Testing
 - [x] Maybe not One Big File 😬
+- [ ] Maybe split web shit out. `main.go` does init, `web.go` does web shit, and
+    `aws.go` can do aws-y shit 🦘
 - [ ] Ok test more critical things lmao
 - [x] Links should expand images in like Slack and shit
 - [x] Slap CDN in front of S3
