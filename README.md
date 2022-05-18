@@ -51,13 +51,13 @@ you're concerned about hash collisions.
 - [x] 404 Page
 - [x] Testing
 - [x] Maybe not One Big File 😬
-- [ ] Maybe split web shit out. `main.go` does init, `web.go` does web shit, and
+- [x] Maybe split web shit out. `main.go` does init, `web.go` does web shit, and
     `aws.go` can do aws-y shit 🦘
 - [ ] Ok test more critical things lmao
 - [x] Links should expand images in like Slack and shit
 - [x] Slap CDN in front of S3
-- [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [x] Learn wtf `context.TODO` is and what we should be using instead
-- [ ] Imma have to make some kinda listing shit, aren't I?
 - [x] [macOS Client](https://github.com/skalnik/file-cloud-app)
+- [ ] Make `<key>.ext` redirect to signed URL for direct linking
+- [ ] Imma have to make some kinda listing shit, aren't I?
 
