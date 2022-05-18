@@ -1,7 +1,6 @@
 const id = "drop-zone";
 
 function setupDropZone() {
-  console.log("Setting up");
   document.addEventListener("drop",      (event) => { metaHandler(event, dropHandler) });
   document.addEventListener("dragover",  (event) => { metaHandler(event, dragoverHandler) });
   document.addEventListener("dragleave", (event) => { metaHandler(event, disableHovering) });
@@ -15,10 +14,6 @@ function metaHandler(event, handler) {
 }
 
 function dropHandler(event) {
-  for (var i = 0; i < event.dataTransfer.files.length; i++) {
-    console.log(event.dataTransfer.files[i])
-  }
-
   disableHovering(event);
   if (event.dataTransfer.files.length < 0 || event.dataTransfer.files.length > 1) {
     // error
