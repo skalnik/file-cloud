@@ -57,6 +57,7 @@ you're concerned about hash collisions.
 - [x] Slap CDN in front of S3
 - [x] Learn wtf `context.TODO` is and what we should be using instead
 - [x] [macOS Client](https://github.com/skalnik/file-cloud-app)
+- [ ] Check for key before upload, save some bandwidth or somethin
 - [ ] Ok, maybe test more critical things lmao
 - [ ] Make `<key>.ext` redirect to signed URL for direct linking
 - [ ] Imma have to make some kinda listing shit, aren't I?
