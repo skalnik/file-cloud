@@ -6,7 +6,8 @@ Upload files and get short links.
 
 1. Step up an S3 bucket in us-west-1 (maybe this should be configurable).
    Optionally, set up a CloudFront distribution for that bucket.
-2. `make build` will give you an `app` executable you can deploy where ever
+2. `make build` will give you an `app` executable you can deploy where ever. I
+   used [Render](https://render.com).
 3. Run it with some environment variables (or pass as flags):
   - `PORT`: What port to listen on
   - `KEY`: An AWS key
@@ -59,6 +60,6 @@ you're concerned about hash collisions.
 - [x] [macOS Client](https://github.com/skalnik/file-cloud-app)
 - [ ] Check for key before upload, save some bandwidth or somethin
 - [ ] Ok, maybe test more critical things lmao
-- [ ] Make `<key>.ext` redirect to signed URL for direct linking
+- [ ] Make `<key>.ext` redirect to URL for direct linking
 - [ ] Imma have to make some kinda listing shit, aren't I?
 
