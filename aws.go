@@ -55,6 +55,13 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	if err != nil {
 		return "", err
 	}
+
+	_, err = awsClient.LookupFile(key)
+	if err == nil {
+		log.Printf("File with key %s already uploaded!", key)
+		return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
+	}
+
 	contentType := fileHeader.Header.Get("Content-Type")
 
 	log.Printf("Uploading file as %s with key %s", contentType, key)
