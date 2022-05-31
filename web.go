@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"errors"
 	"fmt"
 	"html/template"
@@ -9,6 +10,12 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+//go:embed templates/*
+var templates embed.FS
+
+//go:embed static/*
+var static embed.FS
 
 type WebServer struct {
 	User      string
@@ -20,7 +27,7 @@ type WebServer struct {
 func (webServer *WebServer) init() {
 	router := mux.NewRouter()
 	router.Use(webServer.LoggingMiddleware)
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	router.PathPrefix("/static/").Handler(http.FileServer(http.FS(static)))
 	router.HandleFunc("/healthz", webServer.HealthHandler)
 	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
 
@@ -116,7 +123,7 @@ func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {
 }
 
 func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, name string, data StoredFile) {
-	t, err := template.ParseFiles("templates/layout.tmpl.html", fmt.Sprintf("templates/%s.tmpl.html", name))
+	t, err := template.ParseFS(templates, "templates/layout.tmpl.html", fmt.Sprintf("templates/%s.tmpl.html", name))
 	if err != nil {
 		webServer.ServeError(writer, err)
 		return
