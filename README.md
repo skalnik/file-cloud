@@ -6,8 +6,9 @@ Upload files and get short links.
 
 1. Step up an S3 bucket in us-west-1 (maybe this should be configurable).
    Optionally, set up a CloudFront distribution for that bucket.
-2. `make build` will give you an `app` executable you can deploy where ever. I
-   used [Render](https://render.com).
+2. `make build` will give you an `app` executable you can deploy where ever.
+   Alternatively services like [Render](https://render.com) or
+   [Fly.io](https://fly.io) work well.
 3. Run it with some environment variables (or pass as flags):
   - `PORT`: What port to listen on
   - `KEY`: An AWS key
