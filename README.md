@@ -60,7 +60,7 @@ you're concerned about hash collisions.
 - [x] Learn wtf `context.TODO` is and what we should be using instead
 - [x] [macOS Client](https://github.com/skalnik/file-cloud-app)
 - [x] Check for key before upload, save some bandwidth or somethin
-- [ ] Scale images into browser window better
+- [x] Scale images into browser window better
 - [ ] Videos should play in native player thingo if possible
 - [ ] Ok, maybe test more critical things lmao
 - [ ] Make `<key>.ext` redirect to URL for direct linking
