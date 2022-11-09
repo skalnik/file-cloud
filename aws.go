@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -141,6 +142,6 @@ func Filename(originalName string, file io.Reader) (string, error) {
 
 	hash := hasher.Sum(nil)
 	encodedHash := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash)
-	filename := fmt.Sprintf("%s/%s", encodedHash, originalName)
+	filename := fmt.Sprintf("%s/%s", encodedHash, url.QueryEscape(originalName))
 	return filename, nil
 }

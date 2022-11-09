@@ -31,3 +31,17 @@ func TestFilenameBinary(t *testing.T) {
 		)
 	}
 }
+
+func TestURLEncodingFilename(t *testing.T) {
+	sampleFile, err := os.Open("testdata/?#.gif")
+	expectedName := "IoFqAN_p_NwwBj0icXq5y6s66yqOmETp13TSVtxIt8g/%3F%23.gif"
+	newName, err := Filename("?#.gif", bufio.NewReader(sampleFile))
+
+	if expectedName != newName || err != nil {
+		t.Fatalf(
+			`Filename("?#.gif", io.Reader)) = %s, %v, want %s`,
+			newName, err, expectedName,
+		)
+	}
+
+}
