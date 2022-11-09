@@ -35,6 +35,7 @@ type StoredFile struct {
 
 var ErrorObjectMissing = errors.New("Could not find object on S3")
 var ErrorInvalidKey = errors.New("Encountered S3 object with unexpected key")
+var ErrorInvalidFilename = errors.New("Encountered invalid file name")
 
 func (awsClient *AWSClient) init() {
 	creds := credentials.NewStaticCredentialsProvider(awsClient.Key, awsClient.Secret, "")
@@ -104,16 +105,16 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Key:    aws.String(objectKey),
 	}
 
-	var url string
+	var fileURL string
 	if awsClient.CDN == "" {
 		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
 		if err != nil {
 			return StoredFile{}, err
 		}
 
-		url = presign.URL
+		fileURL = presign.URL
 	} else {
-		url = fmt.Sprintf("%s/%s", awsClient.CDN, objectKey)
+		fileURL = fmt.Sprintf("%s/%s", awsClient.CDN, objectKey)
 	}
 
 	object, err := awsClient.S3Client.GetObject(context.Background(), input)
@@ -125,9 +126,14 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		return StoredFile{}, ErrorInvalidKey
 	}
 
+	filename, err := url.QueryUnescape(parts[1])
+	if err != nil {
+		return StoredFile{}, ErrorInvalidFilename
+	}
+
 	file := StoredFile{
-		OriginalName: parts[1],
-		Url:          url,
+		OriginalName: filename,
+		Url:          fileURL,
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
 	return file, nil
