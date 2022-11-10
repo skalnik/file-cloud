@@ -105,6 +105,16 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Key:    aws.String(objectKey),
 	}
 
+	object, err := awsClient.S3Client.GetObject(context.Background(), input)
+	if err != nil {
+		return StoredFile{}, ErrorObjectMissing
+	}
+
+	parts := strings.Split(objectKey, "/")
+	if len(parts) < 2 {
+		return StoredFile{}, ErrorInvalidKey
+	}
+
 	var fileURL string
 	if awsClient.CDN == "" {
 		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
@@ -114,25 +124,13 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 
 		fileURL = presign.URL
 	} else {
-		fileURL = fmt.Sprintf("%s/%s", awsClient.CDN, objectKey)
-	}
-
-	object, err := awsClient.S3Client.GetObject(context.Background(), input)
-	if err != nil {
-		return StoredFile{}, ErrorObjectMissing
-	}
-	parts := strings.Split(objectKey, "/")
-	if len(parts) < 2 {
-		return StoredFile{}, ErrorInvalidKey
-	}
-
-	filename, err := url.QueryUnescape(parts[1])
-	if err != nil {
-		return StoredFile{}, ErrorInvalidFilename
+		// Files with URL-unsafe characters need to be URL encoded
+		filename := url.QueryEscape(parts[1])
+		fileURL = fmt.Sprintf("%s/%s/%s", awsClient.CDN, parts[0], filename)
 	}
 
 	file := StoredFile{
-		OriginalName: filename,
+		OriginalName: parts[1],
 		Url:          fileURL,
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
@@ -148,6 +146,6 @@ func Filename(originalName string, file io.Reader) (string, error) {
 
 	hash := hasher.Sum(nil)
 	encodedHash := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash)
-	filename := fmt.Sprintf("%s/%s", encodedHash, url.QueryEscape(originalName))
+	filename := fmt.Sprintf("%s/%s", encodedHash, originalName)
 	return filename, nil
 }
