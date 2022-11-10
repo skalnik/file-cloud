@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -34,6 +35,7 @@ type StoredFile struct {
 
 var ErrorObjectMissing = errors.New("Could not find object on S3")
 var ErrorInvalidKey = errors.New("Encountered S3 object with unexpected key")
+var ErrorInvalidFilename = errors.New("Encountered invalid file name")
 
 func (awsClient *AWSClient) init() {
 	creds := credentials.NewStaticCredentialsProvider(awsClient.Key, awsClient.Secret, "")
@@ -103,30 +105,33 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Key:    aws.String(objectKey),
 	}
 
-	var url string
+	object, err := awsClient.S3Client.GetObject(context.Background(), input)
+	if err != nil {
+		return StoredFile{}, ErrorObjectMissing
+	}
+
+	parts := strings.Split(objectKey, "/")
+	if len(parts) < 2 {
+		return StoredFile{}, ErrorInvalidKey
+	}
+
+	var fileURL string
 	if awsClient.CDN == "" {
 		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
 		if err != nil {
 			return StoredFile{}, err
 		}
 
-		url = presign.URL
+		fileURL = presign.URL
 	} else {
-		url = fmt.Sprintf("%s/%s", awsClient.CDN, objectKey)
-	}
-
-	object, err := awsClient.S3Client.GetObject(context.Background(), input)
-	if err != nil {
-		return StoredFile{}, ErrorObjectMissing
-	}
-	parts := strings.Split(objectKey, "/")
-	if len(parts) < 2 {
-		return StoredFile{}, ErrorInvalidKey
+		// Files with URL-unsafe characters need to be URL encoded
+		filename := url.QueryEscape(parts[1])
+		fileURL = fmt.Sprintf("%s/%s/%s", awsClient.CDN, parts[0], filename)
 	}
 
 	file := StoredFile{
 		OriginalName: parts[1],
-		Url:          url,
+		Url:          fileURL,
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
 	return file, nil
