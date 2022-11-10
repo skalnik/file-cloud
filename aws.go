@@ -123,9 +123,9 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 
 		fileURL = presign.URL
 	} else {
-		// Files with URL-unsafe characters need to be URL encoded
-		filename := url.QueryEscape(parts[1])
-		fileURL = fmt.Sprintf("%s/%s/%s", awsClient.CDN, parts[0], filename)
+		// Files with URL-unsafe characters mean we need to URL encode our object key
+		escapedKey := url.QueryEscape(objectKey)
+		fileURL = fmt.Sprintf("%s/%s", awsClient.CDN, escapedKey)
 	}
 
 	file := StoredFile{
