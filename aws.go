@@ -35,7 +35,6 @@ type StoredFile struct {
 
 var ErrorObjectMissing = errors.New("Could not find object on S3")
 var ErrorInvalidKey = errors.New("Encountered S3 object with unexpected key")
-var ErrorInvalidFilename = errors.New("Encountered invalid file name")
 
 func (awsClient *AWSClient) init() {
 	creds := credentials.NewStaticCredentialsProvider(awsClient.Key, awsClient.Secret, "")
