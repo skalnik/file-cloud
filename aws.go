@@ -64,6 +64,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	}
 
 	contentType := fileHeader.Header.Get("Content-Type")
+	body := bytes.NewReader(buffer.Bytes())
 
 	log.Printf("Uploading file as %s with key %s", contentType, key)
 
@@ -71,7 +72,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 		Bucket:      aws.String(awsClient.Bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
-		Body:        buffer,
+		Body:        body,
 	})
 
 	if err != nil {
