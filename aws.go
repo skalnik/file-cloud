@@ -54,18 +54,6 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 	return client, nil
 }
 
-func (awsClient *AWSClient) init() {
-	creds := credentials.NewStaticCredentialsProvider(awsClient.Key, awsClient.Secret, "")
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithCredentialsProvider(creds),
-		config.WithRegion("us-west-1"))
-	if err != nil {
-		log.Fatal("Couldn't load S3 Credentials")
-	}
-
-	awsClient.S3Client = s3.NewFromConfig(cfg)
-}
-
 func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
 	buffer := &bytes.Buffer{}
 	tee := io.TeeReader(file, buffer)
