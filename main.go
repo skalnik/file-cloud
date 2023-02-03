@@ -31,7 +31,13 @@ func main() {
 	flag.StringVar(&web.Plausible, "plausible", LookupEnvDefault("PLAUSIBLE", ""), "The domain setup for Plausible. Leave blank to disable")
 	flag.Parse()
 
-	awsClient = *NewAWSClient(bucket, secret, key, cdn)
+	client, err := NewAWSClient(bucket, secret, key, cdn)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	awsClient = *client
+
 	web.init()
 }
 
