@@ -24,7 +24,12 @@ type WebServer struct {
 	Plausible string // Plausible domain
 }
 
-func (webServer *WebServer) init() {
+func NewWebServer(user string, pass string, port string, plausible string) *WebServer {
+	webServer := new(WebServer)
+	webServer.User = user
+	webServer.Pass = pass
+	webServer.Plausible = plausible
+
 	router := mux.NewRouter()
 	router.Use(webServer.LoggingMiddleware)
 	router.PathPrefix("/static/").Handler(http.FileServer(http.FS(static)))
@@ -41,8 +46,10 @@ func (webServer *WebServer) init() {
 		router.HandleFunc("/", webServer.BasicAuthWrapper(webServer.UploadHandler)).Methods("POST")
 	}
 
-	log.Printf("Listening on port %s", webServer.Port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", webServer.Port), router))
+	log.Printf("Listening on port %s", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), router))
+
+	return webServer
 }
 
 func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {
