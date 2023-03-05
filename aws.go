@@ -21,8 +21,6 @@ import (
 
 type AWSClient struct {
 	Bucket   string
-	Key      string
-	Secret   string
 	CDN      string
 	S3Client *s3.Client
 }
@@ -36,16 +34,22 @@ type StoredFile struct {
 var ErrorObjectMissing = errors.New("Could not find object on S3")
 var ErrorInvalidKey = errors.New("Encountered S3 object with unexpected key")
 
-func (awsClient *AWSClient) init() {
-	creds := credentials.NewStaticCredentialsProvider(awsClient.Key, awsClient.Secret, "")
+func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {
+	client := new(AWSClient)
+	client.Bucket = bucket
+	client.CDN = cdn
+
+	creds := credentials.NewStaticCredentialsProvider(key, secret, "")
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithCredentialsProvider(creds),
 		config.WithRegion("us-west-1"))
 	if err != nil {
-		log.Fatal("Couldn't load S3 Credentials")
+		return nil, errors.New("Couldn't load S3 Credentials")
 	}
 
-	awsClient.S3Client = s3.NewFromConfig(cfg)
+	client.S3Client = s3.NewFromConfig(cfg)
+
+	return client, nil
 }
 
 func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
