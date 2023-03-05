@@ -20,7 +20,6 @@ var static embed.FS
 type WebServer struct {
 	User      string
 	Pass      string
-	Port      string // https://twitter.com/keith_duncan/status/638582305917833217
 	Plausible string // Plausible domain
 }
 

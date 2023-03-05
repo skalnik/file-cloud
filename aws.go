@@ -21,8 +21,6 @@ import (
 
 type AWSClient struct {
 	Bucket   string
-	Key      string
-	Secret   string
 	CDN      string
 	S3Client *s3.Client
 }
