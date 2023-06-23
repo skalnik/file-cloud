@@ -36,35 +36,3 @@ retain the original name when downloaded or displayed.
 Lookup URLs are then shortened versions of that base 64 encoded hash, and S3
 keys are looked up by that prefix. The length of that prefix can be increased if
 you're concerned about hash collisions.
-
-## To Do
-
-- [x] HTTP works
-- [x] Can be [deployed](https://render.com) and work
-- [x] Can `POST` a file
-- [x] Ugh, some kinda logging or something idk
-- [x] Authentication
-- [x] Uploads file to S3
-- [x] Can display files
-- [x] Wire up drag & drop to POST file and then redirect to it
-- [x] Rework s3 file names `<full_hash>/og_filename.txt`. Can match subset of
-    key prefix on lookup
-- [x] Looks better
-- [x] No auth required to view
-- [x] Images are sized well for browser
-- [x] 404 Page
-- [x] Testing
-- [x] Maybe not One Big File 😬
-- [x] Maybe split web shit out. `main.go` does init, `web.go` does web shit, and
-    `aws.go` can do aws-y shit 🦘
-- [x] Links should expand images in like Slack and shit
-- [x] Slap CDN in front of S3
-- [x] Learn wtf `context.TODO` is and what we should be using instead
-- [x] [macOS Client](https://github.com/skalnik/file-cloud-app)
-- [x] Check for key before upload, save some bandwidth or somethin
-- [x] Scale images into browser window better
-- [ ] Videos should play in native player thingo if possible
-- [ ] Ok, maybe test more critical things lmao
-- [ ] Make `<key>.ext` redirect to URL for direct linking
-- [ ] Imma have to make some kinda listing shit, aren't I?
-
