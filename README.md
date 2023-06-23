@@ -2,6 +2,8 @@
 
 Upload files and get short links.
 
+![](https://cdn.skalnik.com/EuaIWtTPfkf9qijqHUCWRqbQPK4wMxc054CugSiZzh0%2Ffile+cloud+2023-06-23.gif)
+
 ## It's beautiful, how do I run it?
 
 1. Step up an S3 bucket in us-west-1 (maybe this should be configurable).
