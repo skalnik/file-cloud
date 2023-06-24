@@ -14,18 +14,18 @@ Upload files and get short links.
    - `make run` will compile and run the app, which is useful for
    development.
 3. Run it with some environment variables (or pass as flags):
-  - `PORT`: What port to listen on
-  - `KEY`: An AWS key
-  - `SECRET`: An AWS secret
-  - `BUCKET`: The S3 bucket to store content in
-  - `CDN` (Optional): A CDN URL to use with your S3 object keys. If blank, will
-      use pre-signed S3 URLs instead.
-  - `USERNAME` (Optional): A username to secure uploading behind with basic
-      authentication
-  - `PASSWORD` (Optional): A password to secure uploading behind with basic
-      authentication
-  - `PLAUSIBLE` (Optional): A domain to use with
-      [Plausible](https://plausible.io/) for metrics
+   - `PORT`: What port to listen on
+   - `KEY`: An AWS key
+   - `SECRET`: An AWS secret
+   - `BUCKET`: The S3 bucket to store content in
+   - `CDN` (Optional): A CDN URL to use with your S3 object keys. If blank, will
+       use pre-signed S3 URLs instead.
+   - `USERNAME` (Optional): A username to secure uploading behind with basic
+       authentication
+   - `PASSWORD` (Optional): A password to secure uploading behind with basic
+       authentication
+   - `PLAUSIBLE` (Optional): A domain to use with
+       [Plausible](https://plausible.io/) for metrics
 
 ## What the hell did you shove into my S3 bucket and how do these URLs even?!
 
