@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 )
@@ -20,20 +21,26 @@ var static embed.FS
 type WebServer struct {
 	User      string
 	Pass      string
+	Port      string
 	Plausible string // Plausible domain
+	Router    *mux.Router
+	storage   StorageClient
 }
 
-func NewWebServer(user string, pass string, port string, plausible string) *WebServer {
+func NewWebServer(user string, pass string, port string, plausible string, storage StorageClient) *WebServer {
 	webServer := new(WebServer)
 	webServer.User = user
 	webServer.Pass = pass
+	webServer.Port = port
 	webServer.Plausible = plausible
+	webServer.storage = storage
 
 	router := mux.NewRouter()
 	router.Use(webServer.LoggingMiddleware)
 	router.PathPrefix("/static/").Handler(http.FileServer(http.FS(static)))
 	router.HandleFunc("/healthz", webServer.HealthHandler)
 	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
+	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
 
 	if webServer.User == "" && webServer.Pass == "" {
 		log.Println("Setting up without auth...")
@@ -45,10 +52,14 @@ func NewWebServer(user string, pass string, port string, plausible string) *WebS
 		router.HandleFunc("/", webServer.BasicAuthWrapper(webServer.UploadHandler)).Methods("POST")
 	}
 
-	log.Printf("Listening on port %s", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), router))
+	webServer.Router = router
 
 	return webServer
+}
+
+func (webServer *WebServer) Start() {
+	log.Printf("Listening on port %s", webServer.Port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", webServer.Port), webServer.Router))
 }
 
 func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {
@@ -90,7 +101,7 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 	}
 	defer file.Close()
 
-	url, err := awsClient.UploadFile(file, *header)
+	url, err := webServer.storage.UploadFile(file, *header)
 
 	if err != nil {
 		webServer.ServeError(writer, err)
@@ -104,13 +115,34 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	vars := mux.Vars(request)
 	key := vars["key"]
 
-	file, err := awsClient.LookupFile(key)
+	file, err := webServer.storage.LookupFile(key)
 
 	if err != nil {
 		webServer.ServeError(writer, err)
 	} else {
 		webServer.ServeTemplate(writer, "file", file)
 	}
+}
+
+func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	key := vars["key"]
+
+	file, err := webServer.storage.LookupFile(key)
+
+	if err != nil {
+		webServer.ServeError(writer, err)
+		return
+	}
+
+	fileExt := filepath.Ext(file.OriginalName)
+
+	if fileExt != "."+vars["ext"] {
+		webServer.ServeError(writer, ErrorObjectMissing)
+		return
+	}
+
+	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
 }
 
 func (webServer *WebServer) HealthHandler(writer http.ResponseWriter, request *http.Request) {

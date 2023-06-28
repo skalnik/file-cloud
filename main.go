@@ -42,7 +42,9 @@ func main() {
 		os.Exit(1)
 	}
 	awsClient = *client
-	web = *NewWebServer(user, pass, port, plausible)
+	web = *NewWebServer(user, pass, port, plausible, &awsClient)
+
+	web.Start()
 }
 
 func LookupEnvDefault(envKey, defaultValue string) string {

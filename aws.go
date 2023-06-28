@@ -19,6 +19,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+type StorageClient interface {
+	UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error)
+	LookupFile(prefix string) (StoredFile, error)
+}
+
 type AWSClient struct {
 	Bucket   string
 	CDN      string
