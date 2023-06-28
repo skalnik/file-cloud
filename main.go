@@ -6,9 +6,6 @@ import (
 	"os"
 )
 
-var awsClient AWSClient
-var web WebServer
-
 const KEY_LENGTH = 5
 
 func main() {
@@ -41,9 +38,8 @@ func main() {
 		log.Fatal(err)
 		os.Exit(1)
 	}
-	awsClient = *client
-	web = *NewWebServer(user, pass, port, plausible, &awsClient)
 
+	web := *NewWebServer(user, pass, port, plausible, client)
 	web.Start()
 }
 
