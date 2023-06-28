@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -26,6 +28,8 @@ type WebServer struct {
 	Router    *mux.Router
 	storage   StorageClient
 }
+
+const PLAUSIBLE_API_URL = "https://plausible.io/api/event"
 
 func NewWebServer(user string, pass string, port string, plausible string, storage StorageClient) *WebServer {
 	webServer := new(WebServer)
@@ -142,6 +146,10 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 		return
 	}
 
+	if len(webServer.Plausible) > 0 {
+		webServer.logPlausibleEvent(*request, PLAUSIBLE_API_URL)
+	}
+
 	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
 }
 
@@ -178,5 +186,39 @@ func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, name strin
 	err = t.ExecuteTemplate(writer, "layout", templateData)
 	if err != nil {
 		webServer.ServeError(writer, err)
+	}
+}
+
+type plausibleEvent struct {
+	Name   string `json:"name"`
+	Domain string `json:"domain"`
+	URL    string `json:"url"`
+}
+
+func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL string) {
+	event := plausibleEvent{
+		Name:   "pageview",
+		Domain: webServer.Plausible,
+		URL:    request.URL.String(),
+	}
+
+	var body bytes.Buffer
+	err := json.NewEncoder(&body).Encode(event)
+	if err != nil {
+		log.Printf("\033[31m%s\033[0m", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, apiURL, &body)
+	if err != nil {
+		log.Printf("\033[31m%s\033[0m", err)
+	}
+	req.Header.Add("User-Agent", request.UserAgent())
+	req.Header.Add("X-Forwarded-For", request.RemoteAddr)
+	req.Header.Add("Content-Type", "application/json")
+
+	client := &http.Client{}
+	_, err = client.Do(req)
+	if err != nil {
+		log.Printf("\033[31m%s\033[0m", err)
 	}
 }
