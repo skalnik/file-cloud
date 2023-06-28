@@ -6,7 +6,7 @@ build:
 	go build -o ${BINARY_NAME} main.go aws.go web.go
 
 test:
-	go test -v
+	go test -v --cover
 
 run:
 	go build -o ${BINARY_NAME} main.go aws.go web.go
