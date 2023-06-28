@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 )
@@ -39,6 +40,7 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	router.PathPrefix("/static/").Handler(http.FileServer(http.FS(static)))
 	router.HandleFunc("/healthz", webServer.HealthHandler)
 	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
+	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
 
 	if webServer.User == "" && webServer.Pass == "" {
 		log.Println("Setting up without auth...")
@@ -120,6 +122,27 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	} else {
 		webServer.ServeTemplate(writer, "file", file)
 	}
+}
+
+func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	key := vars["key"]
+
+	file, err := webServer.storage.LookupFile(key)
+
+	if err != nil {
+		webServer.ServeError(writer, err)
+		return
+	}
+
+	fileExt := filepath.Ext(file.OriginalName)
+
+	if fileExt != "."+vars["ext"] {
+		webServer.ServeError(writer, ErrorObjectMissing)
+		return
+	}
+
+	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
 }
 
 func (webServer *WebServer) HealthHandler(writer http.ResponseWriter, request *http.Request) {
