@@ -36,8 +36,8 @@ type StoredFile struct {
 	Image        bool
 }
 
-var ErrorObjectMissing = errors.New("Could not find object on S3")
-var ErrorInvalidKey = errors.New("Encountered S3 object with unexpected key")
+var ErrorObjectMissing = errors.New("could not find object on S3")
+var ErrorInvalidKey = errors.New("encountered S3 object with unexpected key")
 
 func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {
 	client := new(AWSClient)
@@ -49,7 +49,7 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 		config.WithCredentialsProvider(creds),
 		config.WithRegion("us-west-1"))
 	if err != nil {
-		return nil, errors.New("Couldn't load S3 Credentials")
+		return nil, errors.New("couldn't load S3 Credentials")
 	}
 
 	client.S3Client = s3.NewFromConfig(cfg)

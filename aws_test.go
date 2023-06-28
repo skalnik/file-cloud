@@ -7,7 +7,7 @@ import (
 )
 
 func TestFilenameText(t *testing.T) {
-	sampleFile, err := os.Open("testdata/egg.txt")
+	sampleFile, _ := os.Open("testdata/egg.txt")
 	expectedName := "6ziwppLVo8-9ZA4RddxHhHWIXCznXwcVJmMDLSQhg7Y/egg.txt"
 	newName, err := Filename("egg.txt", bufio.NewReader(sampleFile))
 
@@ -20,7 +20,7 @@ func TestFilenameText(t *testing.T) {
 }
 
 func TestFilenameBinary(t *testing.T) {
-	sampleFile, err := os.Open("testdata/smol.gif")
+	sampleFile, _ := os.Open("testdata/smol.gif")
 	expectedName := "IoFqAN_p_NwwBj0icXq5y6s66yqOmETp13TSVtxIt8g/smol.gif"
 	newName, err := Filename("smol.gif", bufio.NewReader(sampleFile))
 
