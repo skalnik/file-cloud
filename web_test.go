@@ -21,6 +21,30 @@ func (c *mockStorage) LookupFile(prefix string) (StoredFile, error) {
 	}, nil
 }
 
+func TestBasicAuth(t *testing.T) {
+	username := "skalnik"
+	password := "hunter2"
+	mockClient := &mockStorage{}
+	server := NewWebServer(username, password, "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Errorf(`Expected unauthorized, but instead got %s`, response.Status)
+	}
+
+	request.SetBasicAuth(username, password)
+
+	responseRecorder = httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response = responseRecorder.Result()
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+}
+
 func TestExtensionRedirect(t *testing.T) {
 	mockClient := &mockStorage{}
 	server := NewWebServer("", "", "", "", mockClient)
@@ -53,7 +77,7 @@ func TestPlausibleEvent(t *testing.T) {
 	userAgent := "golang test"
 	requestIP := "127.0.0.1"
 	domain := "example.com"
-	url := "cloud.example.com/acab1.txt"
+	url := "/acab1.txt"
 
 	plausible := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Header.Get("Content-Type") != "application/json" {
@@ -101,10 +125,10 @@ func TestPlausibleEvent(t *testing.T) {
 	request.RemoteAddr = requestIP
 
 	server.logPlausibleEvent(*request, plausible.URL)
+
 	responseRecorder := httptest.NewRecorder()
 	server.Router.ServeHTTP(responseRecorder, request)
 	response := responseRecorder.Result()
-
 	if response.StatusCode != http.StatusMovedPermanently {
 		t.Fatalf(
 			`Expected redirect, but instead got %s`,

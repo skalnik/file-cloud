@@ -11,7 +11,8 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 //go:embed templates/*
@@ -25,7 +26,7 @@ type WebServer struct {
 	Pass      string
 	Port      string
 	Plausible string // Plausible domain
-	Router    *mux.Router
+	Router    *chi.Mux
 	storage   StorageClient
 }
 
@@ -39,21 +40,21 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	webServer.Plausible = plausible
 	webServer.storage = storage
 
-	router := mux.NewRouter()
-	router.Use(webServer.LoggingMiddleware)
-	router.PathPrefix("/static/").Handler(http.FileServer(http.FS(static)))
-	router.HandleFunc("/healthz", webServer.HealthHandler)
-	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
-	router.HandleFunc(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Heartbeat("/ping"))
+	router.Handle("/static/*", http.FileServer(http.FS(static)))
+	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
+	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
 
 	if webServer.User == "" && webServer.Pass == "" {
 		log.Println("Setting up without auth...")
-		router.HandleFunc("/", webServer.IndexHandler).Methods("GET")
-		router.HandleFunc("/", webServer.UploadHandler).Methods("POST")
+		router.Get("/", webServer.IndexHandler)
+		router.Post("/", webServer.UploadHandler)
 	} else {
 		log.Println("Setting up with basic auth...")
-		router.HandleFunc("/", webServer.BasicAuthWrapper(webServer.IndexHandler)).Methods("GET")
-		router.HandleFunc("/", webServer.BasicAuthWrapper(webServer.UploadHandler)).Methods("POST")
+		router.Get("/", webServer.BasicAuthWrapper(webServer.IndexHandler))
+		router.Post("/", webServer.BasicAuthWrapper(webServer.UploadHandler))
 	}
 
 	webServer.Router = router
@@ -86,13 +87,6 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 	})
 }
 
-func (webServer *WebServer) LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		log.Printf("%s %s", request.Method, request.URL)
-		next.ServeHTTP(writer, request)
-	})
-}
-
 func (webServer *WebServer) IndexHandler(writer http.ResponseWriter, request *http.Request) {
 	webServer.ServeTemplate(writer, "index", StoredFile{})
 }
@@ -116,8 +110,7 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 }
 
 func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	key := vars["key"]
+	key := chi.URLParam(request, "key")
 
 	file, err := webServer.storage.LookupFile(key)
 
@@ -129,19 +122,17 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 }
 
 func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	key := vars["key"]
+	key := chi.URLParam(request, "key")
+	ext := chi.URLParam(request, "ext")
 
 	file, err := webServer.storage.LookupFile(key)
-
 	if err != nil {
 		webServer.ServeError(writer, err)
 		return
 	}
 
 	fileExt := filepath.Ext(file.OriginalName)
-
-	if fileExt != "."+vars["ext"] {
+	if fileExt != "."+ext {
 		webServer.ServeError(writer, ErrorObjectMissing)
 		return
 	}
@@ -151,10 +142,6 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 	}
 
 	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
-}
-
-func (webServer *WebServer) HealthHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.WriteHeader(http.StatusNoContent)
 }
 
 func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {
