@@ -43,5 +43,5 @@ kill_timeout = 5
     grace_period = "10s"
     restart_limit = 0
     method = "head"
-    path = "/healthz"
+    path = "/ping"
     protocol = "http"

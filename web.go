@@ -42,7 +42,7 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
-	router.Use(middleware.Heartbeat("/healthz"))
+	router.Use(middleware.Heartbeat("/ping"))
 	router.Handle("/static/*", http.FileServer(http.FS(static)))
 	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
 	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
