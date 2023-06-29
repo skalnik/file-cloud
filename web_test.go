@@ -21,6 +21,30 @@ func (c *mockStorage) LookupFile(prefix string) (StoredFile, error) {
 	}, nil
 }
 
+func TestBasicAuth(t *testing.T) {
+	username := "skalnik"
+	password := "hunter2"
+	mockClient := &mockStorage{}
+	server := NewWebServer(username, password, "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Errorf(`Expected unauthorized, but instead got %s`, response.Status)
+	}
+
+	request.SetBasicAuth(username, password)
+
+	responseRecorder = httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response = responseRecorder.Result()
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+}
+
 func TestExtensionRedirect(t *testing.T) {
 	mockClient := &mockStorage{}
 	server := NewWebServer("", "", "", "", mockClient)
