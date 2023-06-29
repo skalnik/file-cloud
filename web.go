@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 //go:embed templates/*
@@ -40,9 +41,9 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	webServer.storage = storage
 
 	router := chi.NewRouter()
-	router.Use(webServer.LoggingMiddleware)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Heartbeat("/healthz"))
 	router.Handle("/static/*", http.FileServer(http.FS(static)))
-	router.HandleFunc("/healthz", webServer.HealthHandler)
 	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
 	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
 
@@ -83,13 +84,6 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 
 		writer.Header().Set("WWW-Authenticate", `Basic realm="File Cloud", charset="UTF-8"`)
 		http.Error(writer, "Unauthorized", http.StatusUnauthorized)
-	})
-}
-
-func (webServer *WebServer) LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		log.Printf("%s %s", request.Method, request.URL)
-		next.ServeHTTP(writer, request)
 	})
 }
 
@@ -148,10 +142,6 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 	}
 
 	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
-}
-
-func (webServer *WebServer) HealthHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.WriteHeader(http.StatusNoContent)
 }
 
 func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {
