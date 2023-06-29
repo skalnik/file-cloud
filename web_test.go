@@ -53,7 +53,7 @@ func TestPlausibleEvent(t *testing.T) {
 	userAgent := "golang test"
 	requestIP := "127.0.0.1"
 	domain := "example.com"
-	url := "cloud.example.com/acab1.txt"
+	url := "/acab1.txt"
 
 	plausible := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Header.Get("Content-Type") != "application/json" {
@@ -101,10 +101,10 @@ func TestPlausibleEvent(t *testing.T) {
 	request.RemoteAddr = requestIP
 
 	server.logPlausibleEvent(*request, plausible.URL)
+
 	responseRecorder := httptest.NewRecorder()
 	server.Router.ServeHTTP(responseRecorder, request)
 	response := responseRecorder.Result()
-
 	if response.StatusCode != http.StatusMovedPermanently {
 		t.Fatalf(
 			`Expected redirect, but instead got %s`,
