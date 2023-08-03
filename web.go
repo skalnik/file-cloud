@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -123,7 +124,7 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 
 func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request) {
 	key := chi.URLParam(request, "key")
-	ext := chi.URLParam(request, "ext")
+	ext := strings.ToLower(chi.URLParam(request, "ext"))
 
 	file, err := webServer.storage.LookupFile(key)
 	if err != nil {
@@ -131,7 +132,7 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 		return
 	}
 
-	fileExt := filepath.Ext(file.OriginalName)
+	fileExt := strings.ToLower(filepath.Ext(file.OriginalName))
 	if fileExt != "."+ext {
 		webServer.ServeError(writer, ErrorObjectMissing)
 		return
