@@ -17,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+
+	"github.com/hashicorp/golang-lru/v2"
 )
 
 type StorageClient interface {
@@ -28,6 +30,7 @@ type AWSClient struct {
 	Bucket   string
 	CDN      string
 	S3Client *s3.Client
+	cache    *lru.Cache[string, *StoredFile]
 }
 
 type StoredFile struct {
@@ -53,6 +56,11 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 	}
 
 	client.S3Client = s3.NewFromConfig(cfg)
+	cache, err := lru.New[string, *StoredFile](128)
+	if err != nil {
+		return nil, errors.New("couldn't initialize cache")
+	}
+	client.cache = cache
 
 	return client, nil
 }
@@ -92,6 +100,13 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 }
 
 func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
+	value, ok := awsClient.cache.Get(prefix)
+
+	if ok {
+		log.Printf("Cache hit for %s", prefix)
+		return *value, nil
+	}
+
 	listInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(awsClient.Bucket),
 		Prefix:  aws.String(prefix),
@@ -143,6 +158,9 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Url:          fileURL,
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
+
+	awsClient.cache.Add(prefix, &file)
+
 	return file, nil
 }
 
