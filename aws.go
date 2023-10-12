@@ -56,11 +56,17 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 	}
 
 	client.S3Client = s3.NewFromConfig(cfg)
-	cache, err := lru.New[string, *StoredFile](128)
-	if err != nil {
-		return nil, errors.New("couldn't initialize cache")
+
+	// We don't want to cache presigned URLs
+	if cdn != "" {
+		cache, err := lru.New[string, *StoredFile](128)
+		if err != nil {
+			return nil, errors.New("couldn't initialize cache")
+		}
+		client.cache = cache
+	} else {
+		log.Println("Not setting up cache due to lack of CDN")
 	}
-	client.cache = cache
 
 	return client, nil
 }
@@ -100,10 +106,9 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 }
 
 func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
-	value, ok := awsClient.cache.Get(prefix)
+	value, found := awsClient.cacheGet(prefix)
 
-	if ok {
-		log.Printf("Cache hit for %s", prefix)
+	if found {
 		return *value, nil
 	}
 
@@ -159,9 +164,35 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
 
-	awsClient.cache.Add(prefix, &file)
+	awsClient.cacheSet(prefix, &file)
 
 	return file, nil
+}
+
+func (awsClient *AWSClient) cacheGet(key string) (*StoredFile, bool) {
+	if awsClient.cache == nil {
+		return nil, false
+	}
+
+	value, found := awsClient.cache.Get(key)
+
+	if !found {
+		log.Printf("Cache miss for %s", key)
+		return nil, false
+	}
+
+	log.Printf("Cache hit for %s", key)
+	return value, true
+}
+
+func (awsClient *AWSClient) cacheSet(key string, file *StoredFile) error {
+	if awsClient.cache == nil {
+		return errors.New("No cache initailized")
+	}
+
+	awsClient.cache.Add(key, file)
+
+	return nil
 }
 
 func Filename(originalName string, file io.Reader) (string, error) {
