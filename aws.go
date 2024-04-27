@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -72,9 +71,8 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 }
 
 func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
-	buffer := &bytes.Buffer{}
-	tee := io.TeeReader(file, buffer)
-	key, err := Filename(fileHeader.Filename, tee)
+	key, err := Filename(fileHeader.Filename, file)
+	file.Seek(0, 0)
 
 	if err != nil {
 		return "", err
@@ -87,7 +85,6 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	}
 
 	contentType := fileHeader.Header.Get("Content-Type")
-	body := bytes.NewReader(buffer.Bytes())
 
 	log.Printf("Uploading file as %s with key %s", contentType, key)
 
@@ -95,7 +92,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 		Bucket:      aws.String(awsClient.Bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
-		Body:        body,
+		Body:        file,
 	})
 
 	if err != nil {
