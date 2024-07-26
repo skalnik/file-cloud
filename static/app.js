@@ -6,8 +6,8 @@ function setupListeners() {
   document.addEventListener("dragleave", (event) => { metaHandler(event, disableHovering) });
 
   document.getElementById("file-upload").addEventListener("change", (event) => {
-    uploadFile(event.target.files[0])
-  })
+    uploadFile(event.target.files[0]);
+  });
 }
 
 function metaHandler(event, handler) {
@@ -27,10 +27,10 @@ function dropHandler(event) {
   uploadFile(event.dataTransfer.files[0]);
 }
 
-function uploadFile(file) {
+function uploadFile(file, busyElement) {
   const formData = new FormData();
   formData.append("file", file);
-  event.target.setAttribute('aria-busy', true);
+  document.getElementById(id).setAttribute('aria-busy', true);
   fetch("/", {
     method: "POST",
     body: formData,
