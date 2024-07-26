@@ -20,6 +20,7 @@ jobs:
       name: review
       url: ${{ steps.deploy.outputs.url }}
 
+    steps:
       - name: Get code
         uses: actions/checkout@v4
 
