@@ -7,7 +7,7 @@ body {
   padding: 0;
   margin: 0;
   display: grid;
-  height: 100vh;
+  height: 100dvh;
   grid-template-rows: auto 1fr auto;
 }
 
@@ -76,9 +76,6 @@ hgroup h2 {
 #drop-zone .default-text {
   display: revert;
 }
-#drop-zone .default-text p {
-  margin: 0;
-}
 
 #drop-zone.hover {
   border-color: var(--primary);
@@ -90,4 +87,14 @@ hgroup h2 {
 
 #drop-zone.hover .default-text {
   display: none;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+.upload-text {
+  display: inline-block;
+  cursor: pointer;
+  margin: 0;
 }
