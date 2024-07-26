@@ -1,9 +1,13 @@
 const id = "drop-zone";
 
-function setupDropZone() {
+function setupListeners() {
   document.addEventListener("drop",      (event) => { metaHandler(event, dropHandler) });
   document.addEventListener("dragover",  (event) => { metaHandler(event, dragoverHandler) });
   document.addEventListener("dragleave", (event) => { metaHandler(event, disableHovering) });
+
+  document.getElementById("file-upload").addEventListener("change", (event) => {
+    uploadFile(event.target.files[0])
+  })
 }
 
 function metaHandler(event, handler) {
@@ -25,7 +29,7 @@ function dropHandler(event) {
 
 function uploadFile(file) {
   const formData = new FormData();
-  formData.append("file", event.dataTransfer.files[0]);
+  formData.append("file", file);
   event.target.setAttribute('aria-busy', true);
   fetch("/", {
     method: "POST",
@@ -46,4 +50,4 @@ function disableHovering(event) {
   event.target.classList.remove("hover");
 }
 
-window.addEventListener("load", setupDropZone);
+window.addEventListener("load", setupListeners);
