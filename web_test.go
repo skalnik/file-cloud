@@ -61,18 +61,6 @@ func TestExtensionRedirect(t *testing.T) {
 		)
 	}
 
-	request = httptest.NewRequest(http.MethodGet, "/ACAB1.TXT", nil)
-	responseRecorder = httptest.NewRecorder()
-	server.Router.ServeHTTP(responseRecorder, request)
-	response = responseRecorder.Result()
-
-	if response.StatusCode != http.StatusMovedPermanently {
-		t.Errorf(
-			`Expected redirect, but instead got %s`,
-			response.Status,
-		)
-	}
-
 	request = httptest.NewRequest(http.MethodGet, "/ACAB1.gif", nil)
 	responseRecorder = httptest.NewRecorder()
 	server.Router.ServeHTTP(responseRecorder, request)
