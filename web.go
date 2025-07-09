@@ -43,7 +43,7 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
-	router.Use(middleware.Heartbeat("/ping"))
+	router.HandleFunc("/ping", webServer.Heartbeat)
 	router.Handle("/static/*", http.FileServer(http.FS(static)))
 	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
 	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
@@ -86,6 +86,12 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 		writer.Header().Set("WWW-Authenticate", `Basic realm="File Cloud", charset="UTF-8"`)
 		http.Error(writer, "Unauthorized", http.StatusUnauthorized)
 	})
+}
+
+func (webServer *WebServer) Heartbeat(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte("."))
 }
 
 func (webServer *WebServer) IndexHandler(writer http.ResponseWriter, request *http.Request) {
