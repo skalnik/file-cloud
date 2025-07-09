@@ -106,7 +106,7 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 		webServer.ServeError(writer, err)
 	} else {
 		writer.Header().Set("Content-Type", "application/json")
-		writer.Write([]byte(fmt.Sprintf("{\"url\":\"%s\"}", url)))
+		fmt.Fprintf(writer, "{\"url\":\"%s\"}", url)
 	}
 }
 
