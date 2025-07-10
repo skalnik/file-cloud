@@ -11,9 +11,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 //go:embed templates/*
@@ -22,12 +19,17 @@ var templates embed.FS
 //go:embed static/*
 var static embed.FS
 
+// General interface for ServeMux or middlewares
+type Router interface {
+	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
 type WebServer struct {
 	User      string
 	Pass      string
 	Port      string
 	Plausible string // Plausible domain
-	Router    *chi.Mux
+	Router    Router
 	storage   StorageClient
 }
 
@@ -41,24 +43,23 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	webServer.Plausible = plausible
 	webServer.storage = storage
 
-	router := chi.NewRouter()
-	router.Use(middleware.Logger)
-	router.Use(middleware.Heartbeat("/ping"))
-	router.Handle("/static/*", http.FileServer(http.FS(static)))
-	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}", KEY_LENGTH), webServer.LookupHandler)
-	router.Get(fmt.Sprintf("/{key:[a-zA-Z0-9-_=]{%d,}}.{ext:[a-zA-Z]{3,}}", KEY_LENGTH), webServer.DirectHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ping", webServer.Heartbeat)
+
+	mux.Handle("GET /static/", http.FileServer(http.FS(static)))
+	mux.HandleFunc("GET /{key}", webServer.LookupHandler)
 
 	if webServer.User == "" && webServer.Pass == "" {
 		log.Println("Setting up without auth...")
-		router.Get("/", webServer.IndexHandler)
-		router.Post("/", webServer.UploadHandler)
+		mux.HandleFunc("GET /", webServer.IndexHandler)
+		mux.HandleFunc("POST /", webServer.UploadHandler)
 	} else {
 		log.Println("Setting up with basic auth...")
-		router.Get("/", webServer.BasicAuthWrapper(webServer.IndexHandler))
-		router.Post("/", webServer.BasicAuthWrapper(webServer.UploadHandler))
+		mux.HandleFunc("GET /", webServer.BasicAuthWrapper(webServer.IndexHandler))
+		mux.HandleFunc("POST /", webServer.BasicAuthWrapper(webServer.UploadHandler))
 	}
 
-	webServer.Router = router
+	webServer.Router = NewLogger(mux)
 
 	return webServer
 }
@@ -88,6 +89,12 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 	})
 }
 
+func (webServer *WebServer) Heartbeat(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte("."))
+}
+
 func (webServer *WebServer) IndexHandler(writer http.ResponseWriter, request *http.Request) {
 	webServer.ServeTemplate(writer, "index", StoredFile{})
 }
@@ -106,12 +113,21 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 		webServer.ServeError(writer, err)
 	} else {
 		writer.Header().Set("Content-Type", "application/json")
-		writer.Write([]byte(fmt.Sprintf("{\"url\":\"%s\"}", url)))
+		fmt.Fprintf(writer, "{\"url\":\"%s\"}", url)
 	}
 }
 
 func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *http.Request) {
-	key := chi.URLParam(request, "key")
+	key := request.PathValue("key")
+	idx := strings.Index(key, ".")
+
+	if len(key) > KEY_LENGTH && idx >= KEY_LENGTH {
+		ext := strings.ToLower(key[idx+1:])
+		key = key[:idx]
+
+		webServer.DirectHandler(writer, request, key, ext)
+		return
+	}
 
 	file, err := webServer.storage.LookupFile(key)
 
@@ -122,10 +138,7 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	}
 }
 
-func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request) {
-	key := chi.URLParam(request, "key")
-	ext := strings.ToLower(chi.URLParam(request, "ext"))
-
+func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request, key string, ext string) {
 	file, err := webServer.storage.LookupFile(key)
 	if err != nil {
 		webServer.ServeError(writer, err)
