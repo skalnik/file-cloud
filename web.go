@@ -19,12 +19,17 @@ var templates embed.FS
 //go:embed static/*
 var static embed.FS
 
+// General interface for ServeMux or middlewares
+type Router interface {
+	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
 type WebServer struct {
 	User      string
 	Pass      string
 	Port      string
 	Plausible string // Plausible domain
-	Router    *http.ServeMux
+	Router    Router
 	storage   StorageClient
 }
 
@@ -37,8 +42,6 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	webServer.Port = port
 	webServer.Plausible = plausible
 	webServer.storage = storage
-
-	//router.Use(middleware.Logger)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ping", webServer.Heartbeat)
@@ -56,7 +59,7 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 		mux.HandleFunc("POST /", webServer.BasicAuthWrapper(webServer.UploadHandler))
 	}
 
-	webServer.Router = mux
+	webServer.Router = NewLogger(mux)
 
 	return webServer
 }
