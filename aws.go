@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/hashicorp/golang-lru/v2"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 type StorageClient interface {
@@ -112,7 +112,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 	listInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(awsClient.Bucket),
 		Prefix:  aws.String(prefix),
-		MaxKeys: 1,
+		MaxKeys: aws.Int32(1),
 	}
 
 	objectList, err := awsClient.S3Client.ListObjectsV2(context.Background(), listInput)
@@ -120,7 +120,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		return StoredFile{}, err
 	}
 
-	if objectList.KeyCount < 1 {
+	if *objectList.KeyCount < 1 {
 		return StoredFile{}, ErrorObjectMissing
 	}
 
