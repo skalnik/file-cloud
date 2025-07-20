@@ -92,7 +92,10 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 func (webServer *WebServer) Heartbeat(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(http.StatusOK)
-	writer.Write([]byte("."))
+	_, err := writer.Write([]byte("."))
+	if err != nil {
+		log.Printf("Error writing heartbeat response: %s", err)
+	}
 }
 
 func (webServer *WebServer) IndexHandler(writer http.ResponseWriter, request *http.Request) {
@@ -105,7 +108,12 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 		webServer.ServeError(writer, err)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("Error closing uploaded file: %s", err)
+		}
+	}()
 
 	url, err := webServer.storage.UploadFile(file, *header)
 
@@ -113,7 +121,10 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 		webServer.ServeError(writer, err)
 	} else {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "{\"url\":\"%s\"}", url)
+		_, err := fmt.Fprintf(writer, "{\"url\":\"%s\"}", url)
+		if err != nil {
+			log.Printf("Error writing JSON response: %s", err)
+		}
 	}
 }
 
