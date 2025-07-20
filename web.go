@@ -141,12 +141,11 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	}
 
 	file, err := webServer.storage.LookupFile(key)
-
-	if file != nil {
-		webServer.ServeTemplate(writer, "file", *file)
-	} else if err != nil {
+	if err != nil {
 		webServer.ServeError(writer, err)
 	}
+
+	webServer.ServeTemplate(writer, "file", *file)
 }
 
 func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request, key string, ext string) {
