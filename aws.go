@@ -87,7 +87,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 		return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
 	}
 
-	if err != nil {
+	if err != nil && err != ErrorObjectMissing {
 		return "", err
 	}
 
