@@ -22,7 +22,7 @@ import (
 
 type StorageClient interface {
 	UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error)
-	LookupFile(prefix string) (StoredFile, error)
+	LookupFile(prefix string) (*StoredFile, error)
 }
 
 type AWSClient struct {
@@ -72,16 +72,23 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 
 func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
 	key, err := Filename(fileHeader.Filename, file)
-	file.Seek(0, 0)
-
 	if err != nil {
 		return "", err
 	}
 
-	_, err = awsClient.LookupFile(key)
-	if err == nil {
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return "", err
+	}
+
+	awsFile, err := awsClient.LookupFile(key)
+	if awsFile != nil {
 		log.Printf("File with key %s already uploaded!", key)
 		return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
+	}
+
+	if err != nil {
+		return "", err
 	}
 
 	contentType := fileHeader.Header.Get("Content-Type")
@@ -102,11 +109,11 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
 }
 
-func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
+func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 	value, found := awsClient.cacheGet(prefix)
 
 	if found {
-		return *value, nil
+		return value, nil
 	}
 
 	listInput := &s3.ListObjectsV2Input{
@@ -117,11 +124,11 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 
 	objectList, err := awsClient.S3Client.ListObjectsV2(context.Background(), listInput)
 	if err != nil {
-		return StoredFile{}, err
+		return nil, err
 	}
 
 	if *objectList.KeyCount < 1 {
-		return StoredFile{}, ErrorObjectMissing
+		return nil, ErrorObjectMissing
 	}
 
 	objectKey := *objectList.Contents[0].Key
@@ -133,19 +140,19 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 
 	object, err := awsClient.S3Client.GetObject(context.Background(), input)
 	if err != nil {
-		return StoredFile{}, ErrorObjectMissing
+		return nil, ErrorObjectMissing
 	}
 
 	parts := strings.Split(objectKey, "/")
 	if len(parts) < 2 {
-		return StoredFile{}, ErrorInvalidKey
+		return nil, ErrorInvalidKey
 	}
 
 	var fileURL string
 	if awsClient.CDN == "" {
 		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
 		if err != nil {
-			return StoredFile{}, err
+			return nil, err
 		}
 
 		fileURL = presign.URL
@@ -161,9 +168,12 @@ func (awsClient *AWSClient) LookupFile(prefix string) (StoredFile, error) {
 		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
 	}
 
-	awsClient.cacheSet(prefix, &file)
+	err = awsClient.cacheSet(prefix, &file)
+	if err != nil {
+		return &file, err
+	}
 
-	return file, nil
+	return &file, nil
 }
 
 func (awsClient *AWSClient) cacheGet(key string) (*StoredFile, bool) {
@@ -184,7 +194,7 @@ func (awsClient *AWSClient) cacheGet(key string) (*StoredFile, bool) {
 
 func (awsClient *AWSClient) cacheSet(key string, file *StoredFile) error {
 	if awsClient.cache == nil {
-		return errors.New("No cache initailized")
+		return errors.New("no cache initailized")
 	}
 
 	awsClient.cache.Add(key, file)

@@ -13,8 +13,8 @@ type mockStorage struct {
 	StorageClient
 }
 
-func (c *mockStorage) LookupFile(prefix string) (StoredFile, error) {
-	return StoredFile{
+func (c *mockStorage) LookupFile(prefix string) (*StoredFile, error) {
+	return &StoredFile{
 		OriginalName: "file.txt",
 		Url:          "http://cdn.example.com/file.txt",
 		Image:        false,
