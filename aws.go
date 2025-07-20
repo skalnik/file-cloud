@@ -87,7 +87,8 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 		return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
 	}
 
-	if err != nil && err != ErrorObjectMissing {
+	// Object missing is to be expected here, since we're uploading a new file
+	if err != nil && !errors.Is(err, ErrorObjectMissing) {
 		return "", err
 	}
 
@@ -170,7 +171,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	err = awsClient.cacheSet(prefix, &file)
 	if err != nil {
-		return &file, err
+		log.Printf("Error setting cache: %s", err)
 	}
 
 	return &file, nil
