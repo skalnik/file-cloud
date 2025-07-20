@@ -134,7 +134,7 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	if err != nil {
 		webServer.ServeError(writer, err)
 	} else {
-		webServer.ServeTemplate(writer, "file", file)
+		webServer.ServeTemplate(writer, "file", *file)
 	}
 }
 
