@@ -142,10 +142,10 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 
 	file, err := webServer.storage.LookupFile(key)
 
-	if err != nil {
-		webServer.ServeError(writer, err)
-	} else {
+	if file != nil {
 		webServer.ServeTemplate(writer, "file", *file)
+	} else if err != nil {
+		webServer.ServeError(writer, err)
 	}
 }
 
