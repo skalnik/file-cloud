@@ -1,4 +1,7 @@
 name: Deploy Review App
+permissions:
+  contents: read
+  pull-requests: read
 on:
   pull_request:
     types: [opened, reopened, synchronize, closed]
