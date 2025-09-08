@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 )
 
@@ -19,6 +20,14 @@ func (c *mockStorage) LookupFile(prefix string) (*StoredFile, error) {
 		Url:          "http://cdn.example.com/file.txt",
 		Image:        false,
 	}, nil
+}
+
+type mockEmptyStorage struct {
+	StorageClient
+}
+
+func (c *mockEmptyStorage) LookupFile(prefix string) (*StoredFile, error) {
+	return nil, ErrorObjectMissing
 }
 
 func TestBasicAuth(t *testing.T) {
@@ -145,6 +154,31 @@ func TestPlausibleEvent(t *testing.T) {
 		t.Fatalf(
 			`Expected redirect, but instead got %s`,
 			response.Status,
+		)
+	}
+}
+
+func Test404(t *testing.T) {
+	mockClient := &mockEmptyStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/ACAB1", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != 404 {
+		t.Errorf(
+			`Expected 404, but instead got %s`,
+			response.Status,
+		)
+	}
+
+	var title = regexp.MustCompile(`<title>\s+No file found!\s+</title>`)
+	if title.FindString(responseRecorder.Body.String()) == "" {
+		t.Errorf(
+			`Could not find expected title in body: %s`,
+			responseRecorder.Body.String(),
 		)
 	}
 }
