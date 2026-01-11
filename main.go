@@ -51,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	web := *NewWebServer(user, pass, port, plausible, client)
+	web := NewWebServer(user, pass, port, plausible, client)
 	web.Start()
 }
 
