@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -26,11 +27,24 @@ type StorageClient interface {
 	LookupFile(prefix string) (*StoredFile, error)
 }
 
+// S3API defines the S3 operations used by AWSClient
+type S3API interface {
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+}
+
+// S3PresignAPI defines the presigning operations used by AWSClient
+type S3PresignAPI interface {
+	PresignGetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error)
+}
+
 type AWSClient struct {
-	Bucket   string
-	CDN      string
-	S3Client *s3.Client
-	cache    *lru.Cache[string, *StoredFile]
+	Bucket        string
+	CDN           string
+	s3Client      S3API
+	presignClient S3PresignAPI
+	cache         *lru.Cache[string, *StoredFile]
 }
 
 type StoredFile struct {
@@ -57,7 +71,9 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 		return nil, errors.New("couldn't load S3 Credentials")
 	}
 
-	client.S3Client = s3.NewFromConfig(cfg)
+	s3Client := s3.NewFromConfig(cfg)
+	client.s3Client = s3Client
+	client.presignClient = s3.NewPresignClient(s3Client)
 
 	// We don't want to cache presigned URLs
 	if cdn != "" {
@@ -99,7 +115,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 
 	log.Printf("Uploading file as %s with key %s", contentType, key)
 
-	_, err = awsClient.S3Client.PutObject(context.Background(), &s3.PutObjectInput{
+	_, err = awsClient.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:      aws.String(awsClient.Bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
@@ -129,7 +145,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		MaxKeys: aws.Int32(1),
 	}
 
-	objectList, err := awsClient.S3Client.ListObjectsV2(ctx, listInput)
+	objectList, err := awsClient.s3Client.ListObjectsV2(ctx, listInput)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +161,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		Key:    aws.String(objectKey),
 	}
 
-	object, err := awsClient.S3Client.GetObject(ctx, input)
+	object, err := awsClient.s3Client.GetObject(ctx, input)
 	if err != nil {
 		return nil, ErrorObjectMissing
 	}
@@ -157,7 +173,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	var fileURL string
 	if awsClient.CDN == "" {
-		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(ctx, input)
+		presign, err := awsClient.presignClient.PresignGetObject(ctx, input)
 		if err != nil {
 			return nil, err
 		}
