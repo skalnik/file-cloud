@@ -117,9 +117,8 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 			if user == webServer.User && pass == webServer.Pass {
 				next.ServeHTTP(writer, request)
 				return
-			} else {
-				slog.Warn("Incorrect authentication provided")
 			}
+			slog.Warn("Incorrect authentication provided")
 		}
 
 		writer.Header().Set("WWW-Authenticate", `Basic realm="File Cloud", charset="UTF-8"`)
