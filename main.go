@@ -60,9 +60,9 @@ func LookupEnvDefault(envKey, defaultValue string) string {
 
 	if exists {
 		return value
-	} else {
-		return defaultValue
 	}
+
+	return defaultValue
 }
 
 func setupLogger(level string) {
