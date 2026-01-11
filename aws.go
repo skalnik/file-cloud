@@ -58,6 +58,10 @@ var ErrorInvalidKey = errors.New("encountered S3 object with unexpected key")
 
 const s3Timeout = 30 * time.Second
 
+func formatKey(key string) string {
+	return fmt.Sprintf("/%s", key[0:KEY_LENGTH])
+}
+
 func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {
 	client := new(AWSClient)
 	client.Bucket = bucket
@@ -103,7 +107,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	awsFile, err := awsClient.LookupFile(key)
 	if awsFile != nil {
 		slog.Debug("File already uploaded", "key", key)
-		return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
+		return formatKey(key), nil
 	}
 
 	// Object missing is to be expected here, since we're uploading a new file
@@ -126,7 +130,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 		return "", err
 	}
 
-	return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
+	return formatKey(key), nil
 }
 
 func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
