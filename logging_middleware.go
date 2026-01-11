@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -51,22 +51,30 @@ func (l *LoggingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	duration := time.Since(start)
 
-	log.Printf("%s %s %d %dB/%dB %v %s",
-		r.Method,
-		r.URL.Path,
-		wrapped.statusCode,
-		requestSize,
-		wrapped.responseSize,
-		duration,
-		clientIP,
+	slog.Info("Request",
+		"method", r.Method,
+		"path", r.URL.Path,
+		"status", wrapped.statusCode,
+		"requestSize", requestSize,
+		"responseSize", wrapped.responseSize,
+		"duration", duration,
+		"clientIP", clientIP,
 	)
 
 	if duration > time.Second {
-		log.Printf("\033[31m[SLOW REQUEST] %s %s took %v\033[0m", r.Method, r.URL.Path, duration)
+		slog.Warn("Slow request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"duration", duration,
+		)
 	}
 
 	if wrapped.statusCode >= 400 {
-		log.Printf("\033[31m[ERROR RESPONSE] %s %s returned %d\033[0m", r.Method, r.URL.Path, wrapped.statusCode)
+		slog.Warn("Error response",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", wrapped.statusCode,
+		)
 	}
 
 }

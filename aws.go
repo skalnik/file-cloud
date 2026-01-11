@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"mime/multipart"
 	"net/url"
 	"strings"
@@ -83,7 +83,7 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 		}
 		client.cache = cache
 	} else {
-		log.Println("Not setting up cache due to lack of CDN")
+		slog.Info("Not setting up cache due to lack of CDN")
 	}
 
 	return client, nil
@@ -102,7 +102,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 
 	awsFile, err := awsClient.LookupFile(key)
 	if awsFile != nil {
-		log.Printf("File with key %s already uploaded!", key)
+		slog.Debug("File already uploaded", "key", key)
 		return fmt.Sprintf("/%s", key[0:KEY_LENGTH]), nil
 	}
 
@@ -113,7 +113,7 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 
 	contentType := fileHeader.Header.Get("Content-Type")
 
-	log.Printf("Uploading file as %s with key %s", contentType, key)
+	slog.Debug("Uploading file", "contentType", contentType, "key", key)
 
 	_, err = awsClient.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:      aws.String(awsClient.Bucket),
@@ -193,7 +193,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	err = awsClient.cacheSet(prefix, &file)
 	if err != nil {
-		log.Printf("Error setting cache: %s", err)
+		slog.Warn("Error setting cache", "error", err)
 	}
 
 	return &file, nil
@@ -207,11 +207,11 @@ func (awsClient *AWSClient) cacheGet(key string) (*StoredFile, bool) {
 	value, found := awsClient.cache.Get(key)
 
 	if !found {
-		log.Printf("Cache miss for %s", key)
+		slog.Debug("Cache miss", "key", key)
 		return nil, false
 	}
 
-	log.Printf("Cache hit for %s", key)
+	slog.Debug("Cache hit", "key", key)
 	return value, true
 }
 
