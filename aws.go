@@ -73,7 +73,7 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 		config.WithCredentialsProvider(creds),
 		config.WithRegion("us-west-1"))
 	if err != nil {
-		return nil, errors.New("couldn't load S3 Credentials")
+		return nil, fmt.Errorf("couldn't load S3 Credentials: %w", err)
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
@@ -84,7 +84,7 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 	if cdn != "" {
 		cache, err := lru.New[string, *StoredFile](128)
 		if err != nil {
-			return nil, errors.New("couldn't initialize cache")
+			return nil, fmt.Errorf("couldn't initialize cache: %w", err)
 		}
 		client.cache = cache
 	} else {
