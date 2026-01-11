@@ -267,9 +267,15 @@ func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL strin
 	req.Header.Add("X-Forwarded-For", request.RemoteAddr)
 	req.Header.Add("Content-Type", "application/json")
 
-	_, err = webServer.httpClient.Do(req)
+	resp, err := webServer.httpClient.Do(req)
 	if err != nil {
 		slog.Error("Failed to send Plausible event", "error", err)
 		return
 	}
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			slog.Error("Error closing response body", "error", err)
+		}
+	}()
 }
