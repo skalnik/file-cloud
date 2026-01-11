@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -40,6 +41,8 @@ type StoredFile struct {
 
 var ErrorObjectMissing = errors.New("could not find object on S3")
 var ErrorInvalidKey = errors.New("encountered S3 object with unexpected key")
+
+const s3Timeout = 30 * time.Second
 
 func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {
 	client := new(AWSClient)
@@ -117,13 +120,16 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		return value, nil
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), s3Timeout)
+	defer cancel()
+
 	listInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(awsClient.Bucket),
 		Prefix:  aws.String(prefix),
 		MaxKeys: aws.Int32(1),
 	}
 
-	objectList, err := awsClient.S3Client.ListObjectsV2(context.Background(), listInput)
+	objectList, err := awsClient.S3Client.ListObjectsV2(ctx, listInput)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +145,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		Key:    aws.String(objectKey),
 	}
 
-	object, err := awsClient.S3Client.GetObject(context.Background(), input)
+	object, err := awsClient.S3Client.GetObject(ctx, input)
 	if err != nil {
 		return nil, ErrorObjectMissing
 	}
@@ -151,7 +157,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	var fileURL string
 	if awsClient.CDN == "" {
-		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(context.Background(), input)
+		presign, err := s3.NewPresignClient(awsClient.S3Client).PresignGetObject(ctx, input)
 		if err != nil {
 			return nil, err
 		}
