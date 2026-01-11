@@ -222,7 +222,7 @@ func (awsClient *AWSClient) cacheGet(key string) (*StoredFile, bool) {
 
 func (awsClient *AWSClient) cacheSet(key string, file *StoredFile) error {
 	if awsClient.cache == nil {
-		return errors.New("no cache initailized")
+		return errors.New("no cache initialized")
 	}
 
 	awsClient.cache.Add(key, file)
