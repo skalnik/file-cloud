@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-const KEY_LENGTH = 5
+const keyLength = 5
 
 func main() {
 	var (

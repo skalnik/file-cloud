@@ -529,7 +529,7 @@ func TestUploadFileSuccess(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	// URL should be /KEY_LENGTH characters (5)
+	// URL should be /keyLength characters (5)
 	if len(url) != 6 { // "/" + 5 chars
 		t.Errorf("Expected URL length 6, got %d: %s", len(url), url)
 	}
