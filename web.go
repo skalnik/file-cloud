@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -59,11 +59,11 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	mux.HandleFunc("GET /{key}", webServer.LookupHandler)
 
 	if webServer.User == "" && webServer.Pass == "" {
-		log.Println("Setting up without auth...")
+		slog.Info("Setting up without auth")
 		mux.HandleFunc("GET /", webServer.IndexHandler)
 		mux.HandleFunc("POST /", webServer.UploadHandler)
 	} else {
-		log.Println("Setting up with basic auth...")
+		slog.Info("Setting up with basic auth")
 		mux.HandleFunc("GET /", webServer.BasicAuthWrapper(webServer.IndexHandler))
 		mux.HandleFunc("POST /", webServer.BasicAuthWrapper(webServer.UploadHandler))
 	}
@@ -85,23 +85,25 @@ func (webServer *WebServer) Start() {
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("Listening on port %s", webServer.Port)
+		slog.Info("Listening", "port", webServer.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("Server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-shutdown
-	log.Println("Shutting down...")
+	slog.Info("Shutting down...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Shutdown error: %v", err)
+		slog.Error("Shutdown error", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server stopped")
+	slog.Info("Server stopped")
 }
 
 func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {
@@ -109,13 +111,13 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 		user, pass, ok := request.BasicAuth()
 
 		if !ok {
-			log.Println("Couldn't parse basic auth")
+			slog.Debug("Couldn't parse basic auth")
 		} else {
 			if user == webServer.User && pass == webServer.Pass {
 				next.ServeHTTP(writer, request)
 				return
 			} else {
-				log.Println("Incorrect authentication provided")
+				slog.Warn("Incorrect authentication provided")
 			}
 		}
 
@@ -129,7 +131,7 @@ func (webServer *WebServer) Heartbeat(writer http.ResponseWriter, request *http.
 	writer.WriteHeader(http.StatusOK)
 	_, err := writer.Write([]byte("."))
 	if err != nil {
-		log.Printf("Error writing heartbeat response: %s", err)
+		slog.Error("Error writing heartbeat response", "error", err)
 	}
 }
 
@@ -146,7 +148,7 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Printf("Error closing uploaded file: %s", err)
+			slog.Error("Error closing uploaded file", "error", err)
 		}
 	}()
 
@@ -158,7 +160,7 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 		writer.Header().Set("Content-Type", "application/json")
 		_, err := fmt.Fprintf(writer, "{\"url\":\"%s\"}", url)
 		if err != nil {
-			log.Printf("Error writing JSON response: %s", err)
+			slog.Error("Error writing JSON response", "error", err)
 		}
 	}
 }
@@ -205,7 +207,7 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 }
 
 func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {
-	log.Printf("\033[31m%s\033[0m", err.Error())
+	slog.Error("Request error", "error", err)
 
 	if errors.Is(err, ErrorObjectMissing) {
 		writer.WriteHeader(http.StatusNotFound)
@@ -252,12 +254,12 @@ func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL strin
 	var body bytes.Buffer
 	err := json.NewEncoder(&body).Encode(event)
 	if err != nil {
-		log.Printf("\033[31m%s\033[0m", err)
+		slog.Error("Failed to encode Plausible event", "error", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, &body)
 	if err != nil {
-		log.Printf("\033[31m%s\033[0m", err)
+		slog.Error("Failed to create Plausible request", "error", err)
 	}
 	req.Header.Add("User-Agent", request.UserAgent())
 	req.Header.Add("X-Forwarded-For", request.RemoteAddr)
@@ -265,6 +267,6 @@ func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL strin
 
 	_, err = webServer.httpClient.Do(req)
 	if err != nil {
-		log.Printf("\033[31m%s\033[0m", err)
+		slog.Error("Failed to send Plausible event", "error", err)
 	}
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"os"
 	"strconv"
@@ -12,12 +12,12 @@ import (
 const KEY_LENGTH = 5
 
 func main() {
-	log.Println("File Cloud starting up...")
 	var (
-		bucket string
-		secret string
-		key    string
-		cdn    string
+		bucket   string
+		secret   string
+		key      string
+		cdn      string
+		logLevel string
 
 		user      string
 		pass      string
@@ -29,6 +29,7 @@ func main() {
 	flag.StringVar(&secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
 	flag.StringVar(&key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
 	flag.StringVar(&cdn, "cdn", LookupEnvDefault("CDN", ""), "CDN URL to use for with object keys. Leave blank to use presigned S3 URLs")
+	flag.StringVar(&logLevel, "log-level", LookupEnvDefault("LOG_LEVEL", "debug"), "Log level (debug, info, warn, error)")
 
 	flag.StringVar(&port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on")
 	flag.StringVar(&user, "username", LookupEnvDefault("USERNAME", ""), "A username for basic auth. Leave blank (along with pass) to disable")
@@ -36,13 +37,18 @@ func main() {
 	flag.StringVar(&plausible, "plausible", LookupEnvDefault("PLAUSIBLE", ""), "The domain setup for Plausible. Leave blank to disable")
 	flag.Parse()
 
+	setupLogger(logLevel)
+	slog.Info("File Cloud starting up...")
+
 	if err := ValidateConfig(bucket, secret, key, cdn, port, user, pass); err != nil {
-		log.Fatal(err)
+		slog.Error("Configuration error", "error", err)
+		os.Exit(1)
 	}
 
 	client, err := NewAWSClient(bucket, secret, key, cdn)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Failed to create AWS client", "error", err)
+		os.Exit(1)
 	}
 
 	web := *NewWebServer(user, pass, port, plausible, client)
@@ -57,6 +63,27 @@ func LookupEnvDefault(envKey, defaultValue string) string {
 	} else {
 		return defaultValue
 	}
+}
+
+func setupLogger(level string) {
+	var logLevel slog.Level
+	switch level {
+	case "debug":
+		logLevel = slog.LevelDebug
+	case "info":
+		logLevel = slog.LevelInfo
+	case "warn":
+		logLevel = slog.LevelWarn
+	case "error":
+		logLevel = slog.LevelError
+	default:
+		logLevel = slog.LevelInfo
+	}
+
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+	slog.SetDefault(slog.New(handler))
 }
 
 func ValidateConfig(bucket, secret, key, cdn, port, user, pass string) error {
