@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 //go:embed templates/*
@@ -25,12 +26,13 @@ type Router interface {
 }
 
 type WebServer struct {
-	User      string
-	Pass      string
-	Port      string
-	Plausible string // Plausible domain
-	Router    Router
-	storage   StorageClient
+	User       string
+	Pass       string
+	Port       string
+	Plausible  string // Plausible domain
+	Router     Router
+	storage    StorageClient
+	httpClient *http.Client
 }
 
 const PLAUSIBLE_API_URL = "https://plausible.io/api/event"
@@ -42,6 +44,9 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 	webServer.Port = port
 	webServer.Plausible = plausible
 	webServer.storage = storage
+	webServer.httpClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ping", webServer.Heartbeat)
@@ -228,8 +233,7 @@ func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL strin
 	req.Header.Add("X-Forwarded-For", request.RemoteAddr)
 	req.Header.Add("Content-Type", "application/json")
 
-	client := &http.Client{}
-	_, err = client.Do(req)
+	_, err = webServer.httpClient.Do(req)
 	if err != nil {
 		log.Printf("\033[31m%s\033[0m", err)
 	}
