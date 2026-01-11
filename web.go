@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -9,8 +10,11 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -70,8 +74,34 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 }
 
 func (webServer *WebServer) Start() {
-	log.Printf("Listening on port %s", webServer.Port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", webServer.Port), webServer.Router))
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", webServer.Port),
+		Handler: webServer.Router,
+	}
+
+	// Channel to listen for shutdown signals
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Listening on port %s", webServer.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	<-shutdown
+	log.Println("Shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Shutdown error: %v", err)
+	}
+
+	log.Println("Server stopped")
 }
 
 func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {

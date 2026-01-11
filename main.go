@@ -43,7 +43,6 @@ func main() {
 	client, err := NewAWSClient(bucket, secret, key, cdn)
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
 	web := *NewWebServer(user, pass, port, plausible, client)
