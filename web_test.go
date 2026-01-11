@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -20,6 +21,26 @@ func (c *mockStorage) LookupFile(prefix string) (*StoredFile, error) {
 		Url:          "http://cdn.example.com/file.txt",
 		Image:        false,
 	}, nil
+}
+
+func (c *mockStorage) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
+	return "/ABCDE", nil
+}
+
+type mockImageStorage struct {
+	StorageClient
+}
+
+func (c *mockImageStorage) LookupFile(prefix string) (*StoredFile, error) {
+	return &StoredFile{
+		OriginalName: "image.png",
+		Url:          "http://cdn.example.com/image.png",
+		Image:        true,
+	}, nil
+}
+
+func (c *mockImageStorage) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
+	return "/ABCDE", nil
 }
 
 type mockEmptyStorage struct {
@@ -180,5 +201,209 @@ func Test404(t *testing.T) {
 			`Could not find expected title in body: %s`,
 			responseRecorder.Body.String(),
 		)
+	}
+}
+
+func TestHeartbeat(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	body, _ := io.ReadAll(response.Body)
+	if string(body) != "." {
+		t.Errorf(`Expected ".", but got %s`, string(body))
+	}
+}
+
+func TestIndexHandler(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	var title = regexp.MustCompile(`<title>\s+File Cloud\s+</title>`)
+	if title.FindString(responseRecorder.Body.String()) == "" {
+		t.Errorf(
+			`Could not find expected title in body: %s`,
+			responseRecorder.Body.String(),
+		)
+	}
+}
+
+func TestIndexHandlerWithPlausible(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "example.com", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	var plausibleScript = regexp.MustCompile(`data-domain="example.com"`)
+	if plausibleScript.FindString(responseRecorder.Body.String()) == "" {
+		t.Errorf(
+			`Could not find Plausible script in body: %s`,
+			responseRecorder.Body.String(),
+		)
+	}
+}
+
+func TestUploadHandler(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	// Create a multipart form with a file
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	if err != nil {
+		t.Fatalf("Failed to create form file: %v", err)
+	}
+	part.Write([]byte("test content"))
+	writer.Close()
+
+	request := httptest.NewRequest(http.MethodPost, "/", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	responseBody, _ := io.ReadAll(response.Body)
+	if string(responseBody) != `{"url":"/ABCDE"}` {
+		t.Errorf(`Expected {"url":"/ABCDE"}, but got %s`, string(responseBody))
+	}
+}
+
+func TestUploadHandlerNoFile(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodPost, "/", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusInternalServerError {
+		t.Errorf(`Expected 500, but instead got %s`, response.Status)
+	}
+}
+
+func TestLookupHandler(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/ABCDE", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	// Check that we got the file page with the correct URL
+	var downloadLink = regexp.MustCompile(`href="http://cdn.example.com/file.txt"`)
+	if downloadLink.FindString(responseRecorder.Body.String()) == "" {
+		t.Errorf(
+			`Could not find download link in body: %s`,
+			responseRecorder.Body.String(),
+		)
+	}
+}
+
+func TestLookupHandlerImage(t *testing.T) {
+	mockClient := &mockImageStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/ABCDE", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	// Check that we got an img tag for the image
+	var imgTag = regexp.MustCompile(`<img src="http://cdn.example.com/image.png"`)
+	if imgTag.FindString(responseRecorder.Body.String()) == "" {
+		t.Errorf(
+			`Could not find img tag in body: %s`,
+			responseRecorder.Body.String(),
+		)
+	}
+}
+
+func TestBasicAuthWrongCredentials(t *testing.T) {
+	username := "skalnik"
+	password := "hunter2"
+	mockClient := &mockStorage{}
+	server := NewWebServer(username, password, "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.SetBasicAuth("wronguser", "wrongpass")
+
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Errorf(`Expected unauthorized, but instead got %s`, response.Status)
+	}
+}
+
+func TestBasicAuthWrongPassword(t *testing.T) {
+	username := "skalnik"
+	password := "hunter2"
+	mockClient := &mockStorage{}
+	server := NewWebServer(username, password, "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.SetBasicAuth(username, "wrongpass")
+
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusUnauthorized {
+		t.Errorf(`Expected unauthorized, but instead got %s`, response.Status)
+	}
+}
+
+func TestDirectHandlerWithoutExtension(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	// Key without extension should show file page, not redirect
+	request := httptest.NewRequest(http.MethodGet, "/ABCDE", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK for file page, but instead got %s`, response.Status)
 	}
 }
