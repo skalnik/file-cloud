@@ -155,7 +155,11 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		return nil, err
 	}
 
-	if *objectList.KeyCount < 1 {
+	if objectList.KeyCount == nil || *objectList.KeyCount < 1 {
+		return nil, ErrorObjectMissing
+	}
+
+	if len(objectList.Contents) == 0 || objectList.Contents[0].Key == nil {
 		return nil, ErrorObjectMissing
 	}
 
@@ -190,10 +194,19 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		fileURL = fmt.Sprintf("%s/%s", awsClient.CDN, escapedKey)
 	}
 
+	contentType := aws.ToString(object.ContentType)
+	isImage := false
+	if contentType != "" {
+		contentParts := strings.Split(contentType, "/")
+		if len(contentParts) > 0 && contentParts[0] == "image" {
+			isImage = true
+		}
+	}
+
 	file := StoredFile{
 		OriginalName: parts[1],
 		Url:          fileURL,
-		Image:        strings.Split(*object.ContentType, "/")[0] == "image",
+		Image:        isImage,
 	}
 
 	err = awsClient.cacheSet(prefix, &file)
