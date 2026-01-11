@@ -42,14 +42,15 @@ type WebServer struct {
 const PLAUSIBLE_API_URL = "https://plausible.io/api/event"
 
 func NewWebServer(user string, pass string, port string, plausible string, storage StorageClient) *WebServer {
-	webServer := new(WebServer)
-	webServer.User = user
-	webServer.Pass = pass
-	webServer.Port = port
-	webServer.Plausible = plausible
-	webServer.storage = storage
-	webServer.httpClient = &http.Client{
-		Timeout: 10 * time.Second,
+	webServer := &WebServer{
+		User:      user,
+		Pass:      pass,
+		Port:      port,
+		Plausible: plausible,
+		storage:   storage,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
 
 	mux := http.NewServeMux()

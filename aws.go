@@ -63,9 +63,10 @@ func formatKey(key string) string {
 }
 
 func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {
-	client := new(AWSClient)
-	client.Bucket = bucket
-	client.CDN = cdn
+	client := &AWSClient{
+		Bucket: bucket,
+		CDN:    cdn,
+	}
 
 	creds := credentials.NewStaticCredentialsProvider(key, secret, "")
 	cfg, err := config.LoadDefaultConfig(context.Background(),
