@@ -59,7 +59,7 @@ var ErrorInvalidKey = errors.New("encountered S3 object with unexpected key")
 const s3Timeout = 30 * time.Second
 
 func formatKey(key string) string {
-	return fmt.Sprintf("/%s", key[0:KEY_LENGTH])
+	return fmt.Sprintf("/%s", key[0:keyLength])
 }
 
 func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {

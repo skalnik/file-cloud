@@ -39,7 +39,7 @@ type WebServer struct {
 	httpClient *http.Client
 }
 
-const PLAUSIBLE_API_URL = "https://plausible.io/api/event"
+const plausibleAPIURL = "https://plausible.io/api/event"
 
 func NewWebServer(user string, pass string, port string, plausible string, storage StorageClient) *WebServer {
 	webServer := &WebServer{
@@ -170,7 +170,7 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	key := request.PathValue("key")
 	idx := strings.Index(key, ".")
 
-	if len(key) > KEY_LENGTH && idx >= KEY_LENGTH {
+	if len(key) > keyLength && idx >= keyLength {
 		ext := strings.ToLower(key[idx+1:])
 		key = key[:idx]
 
@@ -201,7 +201,7 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 	}
 
 	if len(webServer.Plausible) > 0 {
-		webServer.logPlausibleEvent(*request, PLAUSIBLE_API_URL)
+		webServer.logPlausibleEvent(*request, plausibleAPIURL)
 	}
 
 	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
