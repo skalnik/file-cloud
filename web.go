@@ -255,11 +255,13 @@ func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL strin
 	err := json.NewEncoder(&body).Encode(event)
 	if err != nil {
 		slog.Error("Failed to encode Plausible event", "error", err)
+		return
 	}
 
 	req, err := http.NewRequest(http.MethodPost, apiURL, &body)
 	if err != nil {
 		slog.Error("Failed to create Plausible request", "error", err)
+		return
 	}
 	req.Header.Add("User-Agent", request.UserAgent())
 	req.Header.Add("X-Forwarded-For", request.RemoteAddr)
@@ -268,5 +270,6 @@ func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL strin
 	_, err = webServer.httpClient.Do(req)
 	if err != nil {
 		slog.Error("Failed to send Plausible event", "error", err)
+		return
 	}
 }
