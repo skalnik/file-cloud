@@ -167,6 +167,12 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 
 func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	key := request.PathValue("key")
+
+	if len(key) < keyLength {
+		webServer.ServeError(writer, ErrorObjectMissing)
+		return
+	}
+
 	idx := strings.Index(key, ".")
 
 	if len(key) > keyLength && idx >= keyLength {
