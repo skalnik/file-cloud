@@ -357,6 +357,24 @@ func TestLookupHandlerImage(t *testing.T) {
 	}
 }
 
+func TestLookupInvalidKeyLength(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	invalidKeys := []string{"/a", "/AB", "/ABC", "/ABCD"}
+
+	for _, path := range invalidKeys {
+		request := httptest.NewRequest(http.MethodGet, path, nil)
+		responseRecorder := httptest.NewRecorder()
+		server.Router.ServeHTTP(responseRecorder, request)
+		response := responseRecorder.Result()
+
+		if response.StatusCode != http.StatusNotFound {
+			t.Errorf(`Expected 404 for key "%s", but got %s`, path, response.Status)
+		}
+	}
+}
+
 func TestBasicAuthWrongCredentials(t *testing.T) {
 	username := "skalnik"
 	password := "hunter2"
