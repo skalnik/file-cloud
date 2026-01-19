@@ -22,7 +22,7 @@ import (
 type mockS3Client struct {
 	putObjectFunc     func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 	listObjectsV2Func func(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
-	getObjectFunc     func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	headObjectFunc    func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 }
 
 func (m *mockS3Client) PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
@@ -39,11 +39,11 @@ func (m *mockS3Client) ListObjectsV2(ctx context.Context, params *s3.ListObjects
 	return &s3.ListObjectsV2Output{KeyCount: aws.Int32(0)}, nil
 }
 
-func (m *mockS3Client) GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-	if m.getObjectFunc != nil {
-		return m.getObjectFunc(ctx, params, optFns...)
+func (m *mockS3Client) HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+	if m.headObjectFunc != nil {
+		return m.headObjectFunc(ctx, params, optFns...)
 	}
-	return &s3.GetObjectOutput{}, nil
+	return &s3.HeadObjectOutput{}, nil
 }
 
 // Mock presign client for testing
@@ -205,8 +205,8 @@ func TestLookupFileWithCDN(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-			return &s3.GetObjectOutput{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
 				ContentType: aws.String("text/plain"),
 			}, nil
 		},
@@ -249,8 +249,8 @@ func TestLookupFileWithPresignedURL(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-			return &s3.GetObjectOutput{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
 				ContentType: aws.String("text/plain"),
 			}, nil
 		},
@@ -350,8 +350,8 @@ func TestLookupFileInvalidKey(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-			return &s3.GetObjectOutput{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
 				ContentType: aws.String("text/plain"),
 			}, nil
 		},
@@ -383,8 +383,8 @@ func TestLookupFileImageContentType(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-			return &s3.GetObjectOutput{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
 				ContentType: aws.String("image/png"),
 			}, nil
 		},
@@ -439,7 +439,7 @@ func TestLookupFileGetObjectError(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 			return nil, errors.New("S3 get error")
 		},
 	}
@@ -468,8 +468,8 @@ func TestLookupFilePresignError(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-			return &s3.GetObjectOutput{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
 				ContentType: aws.String("text/plain"),
 			}, nil
 		},
@@ -552,8 +552,8 @@ func TestUploadFileAlreadyExists(t *testing.T) {
 				},
 			}, nil
 		},
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
-			return &s3.GetObjectOutput{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
 				ContentType: aws.String("text/plain"),
 			}, nil
 		},
