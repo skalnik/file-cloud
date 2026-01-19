@@ -31,7 +31,7 @@ type StorageClient interface {
 type S3API interface {
 	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
-	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 }
 
 // S3PresignAPI defines the presigning operations used by AWSClient
@@ -165,12 +165,12 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	objectKey := *objectList.Contents[0].Key
 
-	input := &s3.GetObjectInput{
+	headInput := &s3.HeadObjectInput{
 		Bucket: aws.String(awsClient.Bucket),
 		Key:    aws.String(objectKey),
 	}
 
-	object, err := awsClient.s3Client.GetObject(ctx, input)
+	headOutput, err := awsClient.s3Client.HeadObject(ctx, headInput)
 	if err != nil {
 		return nil, ErrorObjectMissing
 	}
@@ -182,7 +182,12 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	var fileURL string
 	if awsClient.CDN == "" {
-		presign, err := awsClient.presignClient.PresignGetObject(ctx, input)
+		// For presigned URLs, we need a GetObjectInput
+		getInput := &s3.GetObjectInput{
+			Bucket: aws.String(awsClient.Bucket),
+			Key:    aws.String(objectKey),
+		}
+		presign, err := awsClient.presignClient.PresignGetObject(ctx, getInput)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +199,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		fileURL = fmt.Sprintf("%s/%s", awsClient.CDN, escapedKey)
 	}
 
-	contentType := aws.ToString(object.ContentType)
+	contentType := aws.ToString(headOutput.ContentType)
 	isImage := false
 	if contentType != "" {
 		contentParts := strings.Split(contentType, "/")
