@@ -155,11 +155,8 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		return nil, err
 	}
 
-	if objectList.KeyCount == nil || *objectList.KeyCount < 1 {
-		return nil, ErrorObjectMissing
-	}
-
-	if len(objectList.Contents) == 0 || objectList.Contents[0].Key == nil {
+	if objectList.KeyCount == nil || *objectList.KeyCount < 1 ||
+		len(objectList.Contents) == 0 || objectList.Contents[0].Key == nil {
 		return nil, ErrorObjectMissing
 	}
 
