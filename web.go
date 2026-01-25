@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -107,6 +108,13 @@ func (webServer *WebServer) Start() {
 	slog.Info("Server stopped")
 }
 
+// validateBasicAuth performs constant-time comparison of credentials to prevent timing attacks
+func (webServer *WebServer) validateBasicAuth(user, pass string) bool {
+	userMatch := subtle.ConstantTimeCompare([]byte(user), []byte(webServer.User))
+	passMatch := subtle.ConstantTimeCompare([]byte(pass), []byte(webServer.Pass))
+	return userMatch == 1 && passMatch == 1
+}
+
 func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		user, pass, ok := request.BasicAuth()
@@ -114,7 +122,7 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 		if !ok {
 			slog.Debug("Couldn't parse basic auth")
 		} else {
-			if user == webServer.User && pass == webServer.Pass {
+			if webServer.validateBasicAuth(user, pass) {
 				next.ServeHTTP(writer, request)
 				return
 			}
