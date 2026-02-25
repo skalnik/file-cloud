@@ -411,6 +411,29 @@ func TestBasicAuthWrongPassword(t *testing.T) {
 	}
 }
 
+func TestLookupHandlerOgUrl(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodGet, "/ABCDE", nil)
+	request.Host = "example.com"
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	var ogUrl = regexp.MustCompile(`<meta property="og:url" content="https://example.com/ABCDE" />`)
+	if ogUrl.FindString(responseRecorder.Body.String()) == "" {
+		t.Errorf(
+			`Could not find og:url meta tag in body: %s`,
+			responseRecorder.Body.String(),
+		)
+	}
+}
+
 func TestDirectHandlerWithoutExtension(t *testing.T) {
 	mockClient := &mockStorage{}
 	server := NewWebServer("", "", "", "", mockClient)
