@@ -119,14 +119,17 @@ func TestPlausibleEvent(t *testing.T) {
 	userAgent := "golang test"
 	requestIP := "127.0.0.1"
 	domain := "example.com"
+	host := "files.example.com"
 	url := "/acab1.txt"
+	referrer := "https://example.com/share"
+	expectedURL := "https://" + host + url
 
 	plausible := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Expected Content-Type: application/json header, got: %s", request.Header.Get("Accept"))
+			t.Errorf("Expected Content-Type: application/json header, got: %s", request.Header.Get("Content-Type"))
 		}
 		if request.Header.Get("User-Agent") != userAgent {
-			t.Errorf("Expected User-Agent: %s header, got: %s", userAgent, request.Header.Get("Accept"))
+			t.Errorf("Expected User-Agent: %s header, got: %s", userAgent, request.Header.Get("User-Agent"))
 		}
 		if request.Header.Get("X-Forwarded-For") != requestIP {
 			t.Errorf("Expected X-Forwarded-For: %s header, got: %s", requestIP, request.Header.Get("X-Forwarded-For"))
@@ -149,8 +152,11 @@ func TestPlausibleEvent(t *testing.T) {
 		if event.Domain != domain {
 			t.Errorf(`Expected {domain: %s} but got {domain: %s}`, domain, event.Domain)
 		}
-		if event.URL != url {
-			t.Errorf(`Expected {url: %s} but got {url: %s}`, url, event.URL)
+		if event.URL != expectedURL {
+			t.Errorf(`Expected {url: %s} but got {url: %s}`, expectedURL, event.URL)
+		}
+		if event.Referrer != referrer {
+			t.Errorf(`Expected {referrer: %s} but got {referrer: %s}`, referrer, event.Referrer)
 		}
 
 		writer.WriteHeader(http.StatusOK)
@@ -164,6 +170,8 @@ func TestPlausibleEvent(t *testing.T) {
 	var body bytes.Buffer
 	request, _ := http.NewRequest(http.MethodGet, url, &body)
 	request.Header.Add("User-Agent", userAgent)
+	request.Header.Add("Referer", referrer)
+	request.Host = host
 	request.RemoteAddr = requestIP
 
 	server.logPlausibleEvent(*request, plausible.URL)
