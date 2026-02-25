@@ -260,16 +260,18 @@ func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, request *h
 }
 
 type plausibleEvent struct {
-	Name   string `json:"name"`
-	Domain string `json:"domain"`
-	URL    string `json:"url"`
+	Name     string `json:"name"`
+	Domain   string `json:"domain"`
+	URL      string `json:"url"`
+	Referrer string `json:"referrer"`
 }
 
 func (webServer *WebServer) logPlausibleEvent(request http.Request, apiURL string) {
 	event := plausibleEvent{
-		Name:   "pageview",
-		Domain: webServer.Plausible,
-		URL:    request.URL.String(),
+		Name:     "pageview",
+		Domain:   webServer.Plausible,
+		URL:      fmt.Sprintf("https://%s%s", request.Host, request.URL.String()),
+		Referrer: request.Referer(),
 	}
 
 	var body bytes.Buffer
