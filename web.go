@@ -136,7 +136,7 @@ func (webServer *WebServer) Heartbeat(writer http.ResponseWriter, request *http.
 }
 
 func (webServer *WebServer) IndexHandler(writer http.ResponseWriter, request *http.Request) {
-	webServer.ServeTemplate(writer, "index", StoredFile{})
+	webServer.ServeTemplate(writer, nil, "index", StoredFile{})
 }
 
 func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *http.Request) {
@@ -189,7 +189,7 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 		return
 	}
 
-	webServer.ServeTemplate(writer, "file", *file)
+	webServer.ServeTemplate(writer, request, "file", *file)
 }
 
 func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request, key string, ext string) {
@@ -217,24 +217,31 @@ func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {
 
 	if errors.Is(err, ErrorObjectMissing) {
 		writer.WriteHeader(http.StatusNotFound)
-		webServer.ServeTemplate(writer, "404", StoredFile{})
+		webServer.ServeTemplate(writer, nil, "404", StoredFile{})
 	} else {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, name string, data StoredFile) {
+func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, request *http.Request, name string, data StoredFile) {
 	t, err := template.ParseFS(templates, "templates/layout.tmpl.html", fmt.Sprintf("templates/%s.tmpl.html", name))
 	if err != nil {
 		webServer.ServeError(writer, err)
 		return
 	}
 
+	var pageURL string
+	if request != nil && request.Host != "" {
+		pageURL = fmt.Sprintf("https://%s%s", request.Host, request.URL.Path)
+	}
+
 	templateData := struct {
 		Plausible string
+		PageURL   string
 		StoredFile
 	}{
 		Plausible:  webServer.Plausible,
+		PageURL:    pageURL,
 		StoredFile: data,
 	}
 
