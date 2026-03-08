@@ -6,7 +6,7 @@ Upload files and get short links.
 
 ## It's beautiful, how do I run it?
 
-1. Step up an S3 bucket in us-west-1 (maybe this should be configurable).
+1. Set up an S3 bucket (defaults to us-west-1, configurable via `REGION`).
    Optionally, set up a CloudFront distribution for that bucket.
 2.
    - `make build` will give you an `app` executable you can deploy where ever (I
@@ -18,6 +18,7 @@ Upload files and get short links.
    - `KEY`: An AWS key
    - `SECRET`: An AWS secret
    - `BUCKET`: The S3 bucket to store content in
+   - `REGION` (Optional): The AWS S3 region (defaults to `us-west-1`)
    - `CDN` (Optional): A CDN URL to use with your S3 object keys. If blank, will
        use pre-signed S3 URLs instead.
    - `USERNAME` (Optional): A username to secure uploading behind with basic
