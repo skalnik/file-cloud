@@ -62,7 +62,7 @@ func formatKey(key string) string {
 	return fmt.Sprintf("/%s", key[0:keyLength])
 }
 
-func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSClient, error) {
+func NewAWSClient(bucket string, secret string, key string, cdn string, region string) (*AWSClient, error) {
 	client := &AWSClient{
 		Bucket: bucket,
 		CDN:    cdn,
@@ -71,7 +71,7 @@ func NewAWSClient(bucket string, secret string, key string, cdn string) (*AWSCli
 	creds := credentials.NewStaticCredentialsProvider(key, secret, "")
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithCredentialsProvider(creds),
-		config.WithRegion("us-west-1"))
+		config.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("couldn't load S3 Credentials: %w", err)
 	}

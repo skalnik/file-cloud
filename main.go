@@ -17,6 +17,7 @@ func main() {
 		secret   string
 		key      string
 		cdn      string
+		region   string
 		logLevel string
 
 		user      string
@@ -29,6 +30,7 @@ func main() {
 	flag.StringVar(&secret, "secret", LookupEnvDefault("SECRET", "ABC/123"), "AWS Secret to use")
 	flag.StringVar(&key, "key", LookupEnvDefault("KEY", "ABC123"), "AWS Key to use")
 	flag.StringVar(&cdn, "cdn", LookupEnvDefault("CDN", ""), "CDN URL to use for with object keys. Leave blank to use presigned S3 URLs")
+	flag.StringVar(&region, "region", LookupEnvDefault("REGION", "us-west-1"), "AWS S3 region")
 	flag.StringVar(&logLevel, "log-level", LookupEnvDefault("LOG_LEVEL", "debug"), "Log level (debug, info, warn, error)")
 
 	flag.StringVar(&port, "port", LookupEnvDefault("PORT", "8080"), "Port to listen on")
@@ -45,7 +47,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client, err := NewAWSClient(bucket, secret, key, cdn)
+	client, err := NewAWSClient(bucket, secret, key, cdn, region)
 	if err != nil {
 		slog.Error("Failed to create AWS client", "error", err)
 		os.Exit(1)
