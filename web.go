@@ -56,6 +56,7 @@ func NewWebServer(user string, pass string, port string, plausible string, stora
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ping", webServer.Heartbeat)
+	mux.HandleFunc("HEAD /ping", webServer.Heartbeat)
 
 	mux.Handle("GET /static/", http.FileServer(http.FS(static)))
 	mux.HandleFunc("GET /{key}", webServer.LookupHandler)
@@ -137,9 +138,11 @@ func (webServer *WebServer) BasicAuthWrapper(next http.HandlerFunc) http.Handler
 func (webServer *WebServer) Heartbeat(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(http.StatusOK)
-	_, err := writer.Write([]byte("."))
-	if err != nil {
-		slog.Error("Error writing heartbeat response", "error", err)
+	if request.Method != http.MethodHead {
+		_, err := writer.Write([]byte("."))
+		if err != nil {
+			slog.Error("Error writing heartbeat response", "error", err)
+		}
 	}
 }
 

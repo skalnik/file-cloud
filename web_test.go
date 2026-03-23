@@ -231,6 +231,25 @@ func TestHeartbeat(t *testing.T) {
 	}
 }
 
+func TestHeartbeatHead(t *testing.T) {
+	mockClient := &mockStorage{}
+	server := NewWebServer("", "", "", "", mockClient)
+
+	request := httptest.NewRequest(http.MethodHead, "/ping", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	body, _ := io.ReadAll(response.Body)
+	if len(body) != 0 {
+		t.Errorf(`Expected empty body for HEAD request, but got %s`, string(body))
+	}
+}
+
 func TestIndexHandler(t *testing.T) {
 	mockClient := &mockStorage{}
 	server := NewWebServer("", "", "", "", mockClient)
