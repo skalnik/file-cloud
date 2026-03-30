@@ -30,4 +30,4 @@ jobs:
         id: deploy
         uses: superfly/fly-pr-review-apps@1.6.0
         with:
-          secrets: KEY=${{ secrets.KEY }} SECRET=${{ secrets.SECRET }} BUCKET=${{ secrets.BUCKET }} USERNAME=${{ secrets.USERNAME }} PASSWORD=${{ secrets.PASSWORD }}
+          secrets: KEY=${{ secrets.KEY }} SECRET=${{ secrets.SECRET }} BUCKET=${{ secrets.BUCKET }} USERNAME=${{ secrets.USERNAME }} PASSWORD=${{ secrets.PASSWORD }} REGION=${{ secrets.REGION }}
