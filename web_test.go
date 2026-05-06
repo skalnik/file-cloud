@@ -19,7 +19,6 @@ func (c *mockStorage) LookupFile(prefix string) (*StoredFile, error) {
 	return &StoredFile{
 		OriginalName: "file.txt",
 		Url:          "http://cdn.example.com/file.txt",
-		Image:        false,
 	}, nil
 }
 
@@ -35,7 +34,7 @@ func (c *mockImageStorage) LookupFile(prefix string) (*StoredFile, error) {
 	return &StoredFile{
 		OriginalName: "image.png",
 		Url:          "http://cdn.example.com/image.png",
-		Image:        true,
+		Kind:         KindImage,
 	}, nil
 }
 

@@ -6,7 +6,12 @@ File Cloud &mdash; {{.OriginalName}}
 <meta property="og:type" content="website" />
 <meta property="og:title" content="File Cloud &mdash; {{.OriginalName}}" />
 <meta property="og:url" content="{{.PageURL}}" />
+{{ if eq .Kind "image" }}
 <meta property="og:image" content="{{.Url}}" />
+{{ else if eq .Kind "video" }}
+<meta property="og:video" content="{{.Url}}" />
+<meta property="og:video:url" content="{{.Url}}" />
+{{ end }}
 {{ end }}
 
 {{ define "body" }}
@@ -17,11 +22,15 @@ File Cloud &mdash; {{.OriginalName}}
     </hgroup>
   </header>
 
-  {{ if .Image }}
+  {{ if eq .Kind "image" }}
     <div id="img">
       <a href="{{.Url}}">
         <img src="{{.Url}}" />
       </a>
+    </div>
+  {{ else if eq .Kind "video" }}
+    <div id="video">
+      <video controls preload="metadata" src="{{.Url}}"></video>
     </div>
   {{ else }}
     <div id="file">

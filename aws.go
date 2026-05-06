@@ -47,10 +47,18 @@ type AWSClient struct {
 	cache         *lru.Cache[string, *StoredFile]
 }
 
+type FileKind string
+
+const (
+	KindOther FileKind = ""
+	KindImage FileKind = "image"
+	KindVideo FileKind = "video"
+)
+
 type StoredFile struct {
 	OriginalName string
 	Url          string
-	Image        bool
+	Kind         FileKind
 }
 
 var ErrorObjectMissing = errors.New("could not find object on S3")
@@ -196,19 +204,24 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 		fileURL = fmt.Sprintf("%s/%s", awsClient.CDN, escapedKey)
 	}
 
+	kind := KindOther
 	contentType := aws.ToString(headOutput.ContentType)
-	isImage := false
 	if contentType != "" {
 		contentParts := strings.Split(contentType, "/")
-		if len(contentParts) > 0 && contentParts[0] == "image" {
-			isImage = true
+		if len(contentParts) > 0 {
+			switch contentParts[0] {
+			case "image":
+				kind = KindImage
+			case "video":
+				kind = KindVideo
+			}
 		}
 	}
 
 	file := StoredFile{
 		OriginalName: parts[1],
 		Url:          fileURL,
-		Image:        isImage,
+		Kind:         kind,
 	}
 
 	err = awsClient.cacheSet(prefix, &file)

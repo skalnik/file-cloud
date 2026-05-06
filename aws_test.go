@@ -234,8 +234,8 @@ func TestLookupFileWithCDN(t *testing.T) {
 		t.Errorf("Expected URL '%s', got '%s'", expectedURL, file.Url)
 	}
 
-	if file.Image != false {
-		t.Error("Expected Image to be false for text/plain")
+	if file.Kind != KindOther {
+		t.Errorf("Expected Kind to be KindOther for text/plain, got %q", file.Kind)
 	}
 }
 
@@ -310,7 +310,6 @@ func TestLookupFileCacheHit(t *testing.T) {
 	cachedFile := &StoredFile{
 		OriginalName: "cached.txt",
 		Url:          "https://cdn.example.com/cached",
-		Image:        false,
 	}
 	cache.Add("abc12", cachedFile)
 
@@ -403,8 +402,45 @@ func TestLookupFileImageContentType(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if !file.Image {
-		t.Error("Expected Image to be true for image/png content type")
+	if file.Kind != KindImage {
+		t.Errorf("Expected Kind to be KindImage for image/png, got %q", file.Kind)
+	}
+}
+
+func TestLookupFileVideoContentType(t *testing.T) {
+	cache, _ := lru.New[string, *StoredFile](128)
+
+	mockS3 := &mockS3Client{
+		listObjectsV2Func: func(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+			return &s3.ListObjectsV2Output{
+				KeyCount: aws.Int32(1),
+				Contents: []types.Object{
+					{Key: aws.String("abc123/clip.mp4")},
+				},
+			}, nil
+		},
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{
+				ContentType: aws.String("video/mp4"),
+			}, nil
+		},
+	}
+
+	client := &AWSClient{
+		Bucket:   "test-bucket",
+		CDN:      "https://cdn.example.com",
+		s3Client: mockS3,
+		cache:    cache,
+	}
+
+	file, err := client.LookupFile("abc12")
+
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if file.Kind != KindVideo {
+		t.Errorf("Expected Kind to be KindVideo for video/mp4, got %q", file.Kind)
 	}
 }
 
@@ -666,7 +702,6 @@ func TestCacheGetAndSet(t *testing.T) {
 	testFile := &StoredFile{
 		OriginalName: "test.txt",
 		Url:          "https://example.com/test.txt",
-		Image:        false,
 	}
 
 	// Test set
