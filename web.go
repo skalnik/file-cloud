@@ -42,6 +42,23 @@ type WebServer struct {
 
 const plausibleAPIURL = "https://plausible.io/api/event"
 
+// Longer stateless album URLs get unreliable in the wild, so cap them at the
+// handler level to keep user-visible errors ours
+const maxAlbumFiles = 10
+
+// A member of an album, carrying its short key so the gallery can link to the
+// file's own page
+type AlbumFile struct {
+	Key string
+	StoredFile
+}
+
+type Album struct {
+	Title   string
+	OgImage string
+	Files   []AlbumFile
+}
+
 func NewWebServer(user string, pass string, port string, plausible string, storage StorageClient) *WebServer {
 	webServer := &WebServer{
 		User:      user,
@@ -179,6 +196,11 @@ func (webServer *WebServer) UploadHandler(writer http.ResponseWriter, request *h
 func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *http.Request) {
 	key := request.PathValue("key")
 
+	if strings.Contains(key, "+") {
+		webServer.StatelessAlbumHandler(writer, request, key)
+		return
+	}
+
 	if len(key) < keyLength {
 		webServer.ServeError(writer, ErrorObjectMissing)
 		return
@@ -201,6 +223,47 @@ func (webServer *WebServer) LookupHandler(writer http.ResponseWriter, request *h
 	}
 
 	webServer.ServeTemplate(writer, request, "file", *file)
+}
+
+// StatelessAlbumHandler renders a gallery for `+`-separated file keys
+// (e.g. /kF9xB+pQ2mN). Nothing is stored; the URL is the album.
+func (webServer *WebServer) StatelessAlbumHandler(writer http.ResponseWriter, request *http.Request, keys string) {
+	splitKeys := strings.Split(keys, "+")
+
+	if len(splitKeys) > maxAlbumFiles {
+		http.Error(writer, fmt.Sprintf("Albums are limited to %d files", maxAlbumFiles), http.StatusBadRequest)
+		return
+	}
+
+	files := make([]AlbumFile, 0, len(splitKeys))
+	for _, key := range splitKeys {
+		if len(key) < keyLength {
+			webServer.ServeError(writer, ErrorObjectMissing)
+			return
+		}
+
+		file, err := webServer.storage.LookupFile(key)
+		if err != nil {
+			webServer.ServeError(writer, err)
+			return
+		}
+
+		files = append(files, AlbumFile{Key: key[:keyLength], StoredFile: *file})
+	}
+
+	album := Album{
+		Title: fmt.Sprintf("%d files", len(files)),
+		Files: files,
+	}
+
+	for _, file := range files {
+		if file.Kind == KindImage {
+			album.OgImage = file.Url
+			break
+		}
+	}
+
+	webServer.ServeAlbumTemplate(writer, request, album)
 }
 
 func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *http.Request, key string, ext string) {
@@ -234,16 +297,19 @@ func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {
 	}
 }
 
+func pageURL(request *http.Request) string {
+	if request != nil && request.Host != "" {
+		return fmt.Sprintf("https://%s%s", request.Host, request.URL.Path)
+	}
+
+	return ""
+}
+
 func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, request *http.Request, name string, data StoredFile) {
 	t, err := template.ParseFS(templates, "templates/layout.tmpl.html", fmt.Sprintf("templates/%s.tmpl.html", name))
 	if err != nil {
 		webServer.ServeError(writer, err)
 		return
-	}
-
-	var pageURL string
-	if request != nil && request.Host != "" {
-		pageURL = fmt.Sprintf("https://%s%s", request.Host, request.URL.Path)
 	}
 
 	templateData := struct {
@@ -252,8 +318,31 @@ func (webServer *WebServer) ServeTemplate(writer http.ResponseWriter, request *h
 		StoredFile
 	}{
 		Plausible:  webServer.Plausible,
-		PageURL:    pageURL,
+		PageURL:    pageURL(request),
 		StoredFile: data,
+	}
+
+	err = t.ExecuteTemplate(writer, "layout", templateData)
+	if err != nil {
+		webServer.ServeError(writer, err)
+	}
+}
+
+func (webServer *WebServer) ServeAlbumTemplate(writer http.ResponseWriter, request *http.Request, album Album) {
+	t, err := template.ParseFS(templates, "templates/layout.tmpl.html", "templates/album.tmpl.html")
+	if err != nil {
+		webServer.ServeError(writer, err)
+		return
+	}
+
+	templateData := struct {
+		Plausible string
+		PageURL   string
+		Album
+	}{
+		Plausible: webServer.Plausible,
+		PageURL:   pageURL(request),
+		Album:     album,
 	}
 
 	err = t.ExecuteTemplate(writer, "layout", templateData)

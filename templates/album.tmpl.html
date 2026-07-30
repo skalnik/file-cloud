@@ -1,0 +1,39 @@
+{{ define "title" }}
+File Cloud &mdash; {{.Title}}
+{{ end }}
+
+{{ define "meta" }}
+<meta property="og:type" content="website" />
+<meta property="og:title" content="File Cloud &mdash; {{.Title}}" />
+<meta property="og:url" content="{{.PageURL}}" />
+{{ if .OgImage }}
+<meta property="og:image" content="{{.OgImage}}" />
+{{ end }}
+{{ end }}
+
+{{ define "body" }}
+  <header>
+    <hgroup>
+      <h1>File Cloud</h1>
+      <h2>{{.Title}}</h2>
+    </hgroup>
+  </header>
+
+  <div id="album">
+    {{ range .Files }}
+      {{ if eq .Kind "image" }}
+        <a class="album-item" href="/{{.Key}}">
+          <img src="{{.Url}}" loading="lazy" />
+        </a>
+      {{ else if eq .Kind "video" }}
+        <div class="album-item">
+          <video controls preload="metadata" src="{{.Url}}"></video>
+        </div>
+      {{ else }}
+        <div class="album-item">
+          <a href="{{.Url}}">{{.OriginalName}}</a>
+        </div>
+      {{ end }}
+    {{ end }}
+  </div>
+{{ end }}

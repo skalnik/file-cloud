@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -40,6 +41,19 @@ func (c *mockImageStorage) LookupFile(prefix string) (*StoredFile, error) {
 
 func (c *mockImageStorage) UploadFile(file multipart.File, fileHeader multipart.FileHeader) (string, error) {
 	return "/ABCDE", nil
+}
+
+type mockAlbumStorage struct {
+	StorageClient
+	files map[string]*StoredFile
+}
+
+func (c *mockAlbumStorage) LookupFile(prefix string) (*StoredFile, error) {
+	file, ok := c.files[prefix]
+	if !ok {
+		return nil, ErrorObjectMissing
+	}
+	return file, nil
 }
 
 type mockEmptyStorage struct {
@@ -457,6 +471,78 @@ func TestLookupHandlerOgUrl(t *testing.T) {
 			`Could not find og:url meta tag in body: %s`,
 			responseRecorder.Body.String(),
 		)
+	}
+}
+
+func newAlbumTestServer() *WebServer {
+	mockClient := &mockAlbumStorage{files: map[string]*StoredFile{
+		"AAAAA": {OriginalName: "one.png", Url: "http://cdn.example.com/one.png", Kind: KindImage},
+		"BBBBB": {OriginalName: "two.png", Url: "http://cdn.example.com/two.png", Kind: KindImage},
+		"CCCCC": {OriginalName: "notes.txt", Url: "http://cdn.example.com/notes.txt"},
+	}}
+	return NewWebServer("", "", "", "", mockClient)
+}
+
+func TestStatelessAlbumHandler(t *testing.T) {
+	server := newAlbumTestServer()
+
+	request := httptest.NewRequest(http.MethodGet, "/AAAAA+BBBBB+CCCCC", nil)
+	responseRecorder := httptest.NewRecorder()
+	server.Router.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf(`Expected 200 OK, but instead got %s`, response.Status)
+	}
+
+	body := responseRecorder.Body.String()
+
+	expectations := []string{
+		// Images render as thumbnails linked to their own file pages
+		`<a class="album-item" href="/AAAAA">`,
+		`<img src="http://cdn.example.com/one.png"`,
+		`<a class="album-item" href="/BBBBB">`,
+		`<img src="http://cdn.example.com/two.png"`,
+		// Non-images render as download links
+		`<a href="http://cdn.example.com/notes.txt">notes.txt</a>`,
+		// og:image comes from the first image member
+		`<meta property="og:image" content="http://cdn.example.com/one.png" />`,
+	}
+
+	for _, expected := range expectations {
+		if !strings.Contains(body, expected) {
+			t.Errorf(`Could not find %q in body: %s`, expected, body)
+		}
+	}
+}
+
+func TestStatelessAlbumHandlerErrors(t *testing.T) {
+	server := newAlbumTestServer()
+
+	tooMany := "/" + strings.Repeat("AAAAA+", maxAlbumFiles) + "AAAAA"
+
+	tests := []struct {
+		name   string
+		path   string
+		status int
+	}{
+		{"missing member", "/AAAAA+ZZZZZ", http.StatusNotFound},
+		{"short key", "/AAAAA+BB", http.StatusNotFound},
+		{"empty key", "/AAAAA+", http.StatusNotFound},
+		{"too many keys", tooMany, http.StatusBadRequest},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, test.path, nil)
+			responseRecorder := httptest.NewRecorder()
+			server.Router.ServeHTTP(responseRecorder, request)
+			response := responseRecorder.Result()
+
+			if response.StatusCode != test.status {
+				t.Errorf(`Expected %d for path "%s", but got %s`, test.status, test.path, response.Status)
+			}
+		})
 	}
 }
 
