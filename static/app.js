@@ -1,4 +1,5 @@
 const id = "drop-zone";
+const maxAlbumFiles = 10;
 
 function setupListeners() {
   document.addEventListener("drop",      (event) => { metaHandler(event, dropHandler) });
@@ -6,7 +7,7 @@ function setupListeners() {
   document.addEventListener("dragleave", (event) => { metaHandler(event, disableHovering) });
 
   document.getElementById("file-upload").addEventListener("change", (event) => {
-    uploadFile(event.target.files[0]);
+    uploadFiles(event.target.files);
   });
 }
 
@@ -19,26 +20,52 @@ function metaHandler(event, handler) {
 
 function dropHandler(event) {
   disableHovering(event);
-  if (event.dataTransfer.files.length < 0 || event.dataTransfer.files.length > 1) {
-    // error
+  uploadFiles(event.dataTransfer.files);
+}
+
+async function uploadFiles(files) {
+  if (files.length < 1) {
     return;
   }
 
-  uploadFile(event.dataTransfer.files[0]);
+  if (files.length > maxAlbumFiles) {
+    alert(`Albums are limited to ${maxAlbumFiles} files`);
+    return;
+  }
+
+  const dropZone = document.getElementById(id);
+  dropZone.setAttribute("aria-busy", true);
+
+  const keys = [];
+  try {
+    for (const file of files) {
+      keys.push(await uploadFile(file));
+    }
+  } catch (error) {
+    dropZone.removeAttribute("aria-busy");
+    alert(`Upload failed: ${error.message}`);
+    return;
+  }
+
+  // A single key is just the normal file page; more form a stateless album
+  window.location.href = `/${keys.join("+")}`;
 }
 
-function uploadFile(file, busyElement) {
+async function uploadFile(file) {
   const formData = new FormData();
   formData.append("file", file);
-  document.getElementById(id).setAttribute('aria-busy', true);
-  fetch("/", {
+
+  const response = await fetch("/", {
     method: "POST",
     body: formData,
-  }).then(r => r.json())
-    .then(data => {
-      const url = data.url;
-      window.location.href = url;
   });
+
+  if (!response.ok) {
+    throw new Error(`server responded ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.url.replace(/^\//, "");
 }
 
 function dragoverHandler(event) {
