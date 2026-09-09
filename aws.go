@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -8,10 +9,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"mime/multipart"
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
@@ -126,6 +129,22 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 
 	contentType := fileHeader.Header.Get("Content-Type")
 
+	// Detect and set charset
+	if withCharset, needed := utf8ContentType(contentType); needed {
+		valid, err := isUTF8(file)
+		if err != nil {
+			return "", err
+		}
+
+		if _, err := file.Seek(0, 0); err != nil {
+			return "", err
+		}
+
+		if valid {
+			contentType = withCharset
+		}
+	}
+
 	slog.Debug("Uploading file", "contentType", contentType, "key", key)
 
 	_, err = awsClient.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
@@ -140,6 +159,43 @@ func (awsClient *AWSClient) UploadFile(file multipart.File, fileHeader multipart
 	}
 
 	return formatKey(key), nil
+}
+
+func utf8ContentType(contentType string) (string, bool) {
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return contentType, false
+	}
+
+	if !strings.HasPrefix(mediaType, "text/") {
+		return contentType, false
+	}
+
+	if _, found := params["charset"]; found {
+		return contentType, false
+	}
+
+	params["charset"] = "utf-8"
+	return mime.FormatMediaType(mediaType, params), true
+}
+
+func isUTF8(file io.Reader) (bool, error) {
+	reader := bufio.NewReader(file)
+
+	for {
+		char, size, err := reader.ReadRune()
+		if errors.Is(err, io.EOF) {
+			return true, nil
+		}
+
+		if err != nil {
+			return false, err
+		}
+
+		if char == utf8.RuneError && size == 1 {
+			return false, nil
+		}
+	}
 }
 
 func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {

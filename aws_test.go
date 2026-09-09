@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/textproto"
 	"os"
@@ -731,5 +732,130 @@ func TestCacheMiss(t *testing.T) {
 	_, found := client.cacheGet("nonexistent")
 	if found {
 		t.Error("Expected cache miss for nonexistent key")
+	}
+}
+
+func TestUtf8ContentType(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		expected    string
+		expectedOk  bool
+	}{
+		{"text without charset", "text/plain", "text/plain; charset=utf-8", true},
+		{"text with parameters", "text/csv; header=present", "text/csv; charset=utf-8; header=present", true},
+		{"text with a charset", "text/plain; charset=iso-8859-1", "text/plain; charset=iso-8859-1", false},
+		{"text with an uppercase type", "TEXT/PLAIN", "text/plain; charset=utf-8", true},
+		{"an image", "image/png", "image/png", false},
+		{"an empty content type", "", "", false},
+		{"an invalid content type", "not a media type", "not a media type", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, ok := utf8ContentType(test.contentType)
+
+			if result != test.expected || ok != test.expectedOk {
+				t.Errorf(
+					"utf8ContentType(%q) = %q, %v, want %q, %v",
+					test.contentType, result, ok, test.expected, test.expectedOk,
+				)
+			}
+		})
+	}
+}
+
+func TestIsUTF8(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  []byte
+		expected bool
+	}{
+		{"ascii", []byte("plain text"), true},
+		{"utf-8", []byte("café ☕"), true},
+		{"empty", []byte{}, true},
+		{"latin-1", []byte{0x63, 0x61, 0x66, 0xE9}, false},
+		{"an incomplete rune", []byte{0xE2, 0x98}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := isUTF8(bytes.NewReader(test.content))
+
+			if err != nil {
+				t.Fatalf("Expected no error, got %v", err)
+			}
+
+			if result != test.expected {
+				t.Errorf("isUTF8(%q) = %v, want %v", test.content, result, test.expected)
+			}
+		})
+	}
+}
+
+// uploadFileForContentType uploads one file and gives back the content type and
+// the body that the client sent to S3.
+func uploadFileForContentType(t *testing.T, filename string, content []byte, contentType string) (string, []byte) {
+	t.Helper()
+
+	var capturedContentType string
+	var capturedBody []byte
+
+	mockS3 := &mockS3Client{
+		listObjectsV2Func: func(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+			return &s3.ListObjectsV2Output{
+				KeyCount: aws.Int32(0),
+				Contents: []types.Object{},
+			}, nil
+		},
+		putObjectFunc: func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+			capturedContentType = *params.ContentType
+			body, err := io.ReadAll(params.Body)
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+			capturedBody = body
+			return &s3.PutObjectOutput{}, nil
+		},
+	}
+
+	client := &AWSClient{
+		Bucket:   "test-bucket",
+		CDN:      "https://cdn.example.com",
+		s3Client: mockS3,
+		cache:    nil,
+	}
+
+	fileHeader, _ := createMockFileHeader(filename, content, contentType)
+	file, _ := fileHeader.Open()
+	defer file.Close()
+
+	if _, err := client.UploadFile(file, *fileHeader); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	return capturedContentType, capturedBody
+}
+
+func TestUploadFileAddsCharsetToText(t *testing.T) {
+	content := []byte("café ☕\n")
+	capturedContentType, capturedBody := uploadFileForContentType(t, "note.txt", content, "text/plain")
+
+	if capturedContentType != "text/plain; charset=utf-8" {
+		t.Errorf("Expected content type 'text/plain; charset=utf-8', got '%s'", capturedContentType)
+	}
+
+	// The UTF-8 test reads the file, so the body must go back to the start
+	if !bytes.Equal(capturedBody, content) {
+		t.Errorf("Expected body '%s', got '%s'", content, capturedBody)
+	}
+}
+
+func TestUploadFileKeepsContentTypeForOtherEncodings(t *testing.T) {
+	content := []byte{0x63, 0x61, 0x66, 0xE9}
+	capturedContentType, _ := uploadFileForContentType(t, "note.txt", content, "text/plain")
+
+	if capturedContentType != "text/plain" {
+		t.Errorf("Expected content type 'text/plain', got '%s'", capturedContentType)
 	}
 }
