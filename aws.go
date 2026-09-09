@@ -60,7 +60,7 @@ const (
 
 type StoredFile struct {
 	OriginalName string
-	Url          string
+	URL          string
 	Kind         FileKind
 }
 
@@ -276,7 +276,7 @@ func (awsClient *AWSClient) LookupFile(prefix string) (*StoredFile, error) {
 
 	file := StoredFile{
 		OriginalName: parts[1],
-		Url:          fileURL,
+		URL:          fileURL,
 		Kind:         kind,
 	}
 

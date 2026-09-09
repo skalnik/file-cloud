@@ -19,7 +19,7 @@ type mockStorage struct {
 func (c *mockStorage) LookupFile(prefix string) (*StoredFile, error) {
 	return &StoredFile{
 		OriginalName: "file.txt",
-		Url:          "http://cdn.example.com/file.txt",
+		URL:          "http://cdn.example.com/file.txt",
 	}, nil
 }
 
@@ -34,7 +34,7 @@ type mockImageStorage struct {
 func (c *mockImageStorage) LookupFile(prefix string) (*StoredFile, error) {
 	return &StoredFile{
 		OriginalName: "image.png",
-		Url:          "http://cdn.example.com/image.png",
+		URL:          "http://cdn.example.com/image.png",
 		Kind:         KindImage,
 	}, nil
 }
@@ -451,7 +451,7 @@ func TestBasicAuthWrongPassword(t *testing.T) {
 	}
 }
 
-func TestLookupHandlerOgUrl(t *testing.T) {
+func TestLookupHandlerOgURL(t *testing.T) {
 	mockClient := &mockStorage{}
 	server := NewWebServer("", "", "", "", mockClient)
 
@@ -465,8 +465,8 @@ func TestLookupHandlerOgUrl(t *testing.T) {
 		t.Errorf(`Expected 200 OK, but instead got %s`, response.Status)
 	}
 
-	var ogUrl = regexp.MustCompile(`<meta property="og:url" content="https://example.com/ABCDE" />`)
-	if ogUrl.FindString(responseRecorder.Body.String()) == "" {
+	var ogURL = regexp.MustCompile(`<meta property="og:url" content="https://example.com/ABCDE" />`)
+	if ogURL.FindString(responseRecorder.Body.String()) == "" {
 		t.Errorf(
 			`Could not find og:url meta tag in body: %s`,
 			responseRecorder.Body.String(),
@@ -476,9 +476,9 @@ func TestLookupHandlerOgUrl(t *testing.T) {
 
 func newAlbumTestServer() *WebServer {
 	mockClient := &mockAlbumStorage{files: map[string]*StoredFile{
-		"AAAAA": {OriginalName: "one.png", Url: "http://cdn.example.com/one.png", Kind: KindImage},
-		"BBBBB": {OriginalName: "two.png", Url: "http://cdn.example.com/two.png", Kind: KindImage},
-		"CCCCC": {OriginalName: "notes.txt", Url: "http://cdn.example.com/notes.txt"},
+		"AAAAA": {OriginalName: "one.png", URL: "http://cdn.example.com/one.png", Kind: KindImage},
+		"BBBBB": {OriginalName: "two.png", URL: "http://cdn.example.com/two.png", Kind: KindImage},
+		"CCCCC": {OriginalName: "notes.txt", URL: "http://cdn.example.com/notes.txt"},
 	}}
 	return NewWebServer("", "", "", "", mockClient)
 }

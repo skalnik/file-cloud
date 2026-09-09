@@ -7,34 +7,34 @@ File Cloud &mdash; {{.OriginalName}}
 <meta property="og:title" content="File Cloud &mdash; {{.OriginalName}}" />
 <meta property="og:url" content="{{.PageURL}}" />
 {{ if eq .Kind "image" }}
-<meta property="og:image" content="{{.Url}}" />
+<meta property="og:image" content="{{.URL}}" />
 {{ else if eq .Kind "video" }}
-<meta property="og:video" content="{{.Url}}" />
-<meta property="og:video:url" content="{{.Url}}" />
+<meta property="og:video" content="{{.URL}}" />
+<meta property="og:video:url" content="{{.URL}}" />
 {{ end }}
 {{ end }}
 
 {{ define "body" }}
-  <header>
-    <hgroup>
-      <h1>File Cloud</h1>
-      <h2>{{.OriginalName}}</h2>
-    </hgroup>
-  </header>
+<header>
+  <hgroup>
+    <h1>File Cloud</h1>
+    <h2>{{.OriginalName}}</h2>
+  </hgroup>
+</header>
 
-  {{ if eq .Kind "image" }}
-    <div id="img">
-      <a href="{{.Url}}">
-        <img src="{{.Url}}" />
-      </a>
-    </div>
-  {{ else if eq .Kind "video" }}
-    <div id="video">
-      <video controls preload="metadata" src="{{.Url}}"></video>
-    </div>
-  {{ else }}
-    <div id="file">
-      <a href="{{.Url}}">Click here to download</a>
-    </div>
-  {{ end }}
+{{ if eq .Kind "image" }}
+<div id="img">
+  <a href="{{.URL}}">
+    <img src="{{.URL}}" />
+  </a>
+</div>
+{{ else if eq .Kind "video" }}
+<div id="video">
+  <video controls preload="metadata" src="{{.URL}}"></video>
+</div>
+{{ else }}
+<div id="file">
+  <a href="{{.URL}}">Click here to download</a>
+</div>
+{{ end }}
 {{ end }}

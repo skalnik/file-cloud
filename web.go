@@ -253,7 +253,7 @@ func (webServer *WebServer) StatelessAlbumHandler(writer http.ResponseWriter, re
 
 	for _, file := range files {
 		if file.Kind == KindImage {
-			album.OgImage = file.Url
+			album.OgImage = file.URL
 			break
 		}
 	}
@@ -278,7 +278,7 @@ func (webServer *WebServer) DirectHandler(writer http.ResponseWriter, request *h
 		webServer.logPlausibleEvent(*request, plausibleAPIURL)
 	}
 
-	http.Redirect(writer, request, file.Url, http.StatusMovedPermanently)
+	http.Redirect(writer, request, file.URL, http.StatusMovedPermanently)
 }
 
 func (webServer *WebServer) ServeError(writer http.ResponseWriter, err error) {

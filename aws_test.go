@@ -231,8 +231,8 @@ func TestLookupFileWithCDN(t *testing.T) {
 	}
 
 	expectedURL := "https://cdn.example.com/abc123%2Ftestfile.txt"
-	if file.Url != expectedURL {
-		t.Errorf("Expected URL '%s', got '%s'", expectedURL, file.Url)
+	if file.URL != expectedURL {
+		t.Errorf("Expected URL '%s', got '%s'", expectedURL, file.URL)
 	}
 
 	if file.Kind != KindOther {
@@ -277,8 +277,8 @@ func TestLookupFileWithPresignedURL(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if file.Url != "https://s3.amazonaws.com/presigned-url" {
-		t.Errorf("Expected presigned URL, got '%s'", file.Url)
+	if file.URL != "https://s3.amazonaws.com/presigned-url" {
+		t.Errorf("Expected presigned URL, got '%s'", file.URL)
 	}
 }
 
@@ -310,7 +310,7 @@ func TestLookupFileCacheHit(t *testing.T) {
 	cache, _ := lru.New[string, *StoredFile](128)
 	cachedFile := &StoredFile{
 		OriginalName: "cached.txt",
-		Url:          "https://cdn.example.com/cached",
+		URL:          "https://cdn.example.com/cached",
 	}
 	cache.Add("abc12", cachedFile)
 
@@ -702,7 +702,7 @@ func TestCacheGetAndSet(t *testing.T) {
 
 	testFile := &StoredFile{
 		OriginalName: "test.txt",
-		Url:          "https://example.com/test.txt",
+		URL:          "https://example.com/test.txt",
 	}
 
 	// Test set
